@@ -159,7 +159,8 @@ you're not sure what to do here, type "-18" -- it might not make the output
 sound great, but it probably won't mangle it beyond recognition.
 
 
-# Multiple scenes
+# Multiple scene types
 
-Aeschylus has some support for different scenes: this at least partly works,
-but isn't tested, so is left undocumented for now.
+Aeschylus has some support for different types of scene (e.g. screen only,
+screen with camera): this at least partly works, but isn't tested, so is left
+undocumented for now.
