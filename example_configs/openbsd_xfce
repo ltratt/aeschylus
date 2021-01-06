@@ -1,0 +1,192 @@
+# X11 windows which you wish to make invisible during screencasting.
+APPS_MK_INVISIBLE="gkrellm xfce4-panel"
+# Processes which you wish to suspend with SIGSTOP during recording. They
+# will be resumed with SIGCONT when recording has finished.
+APPS_STOP="extsmaild chromium firefox gimp iridium thunderbird xfce4-panel xfce4-notifyd"
+AUDIO_DEVICE="snd/0"
+AUDIO_DRIVER="sndio"
+# In order to prevent audio being continually converted between formats --
+# which can downgrade the quality -- the following two settings should match
+# whatever your audio interface is set to.
+AUDIO_FMT="s16"
+AUDIO_RATE="44100"
+# The desktop background will be set to this colour.
+#BACKGROUND_COLOUR="0x263127"
+BACKGROUND_COLOUR="0x595959"
+MINI_CAMERA_CROP="700:490:350:160"
+MINI_CAMERA_SCALE="470:-1"
+# If your audio/video are out of sync, use an audio sync test video such as:
+#   24fps https://www.youtube.com/watch?v=lXcZSY4XCDc
+#   30fps https://www.youtube.com/watch?v=TjAa0wOe5k4
+# If your camera footage is behind the audio, this variable should be negative;
+# if the camera footage is ahead of the audio it should be positive. Time in
+# seconds.
+CAMERA_OFF="0"
+CAMERA_DEVICE="/dev/video0"
+# If you're capturing the camera at a different framerate to X11, make sure the
+# two are integer multiples to avoid weird frame duplication in the final
+# video.
+CAMERA_FRAMERATE=30
+# Where to place the camera overlay.
+CAMERA_OVERLAY="x=W-w+60:y=H-h+1"
+CAMERA_RESOLUTION="1280x720"
+# If you don't have a greenscreen, set this to "null"
+CHROMAKEY="chromakey=85a869:0.0625:0.005,despill=type=green:mix=0.5:expand=0.3:brightness=0:green=-1:blue=0"
+# How often to generate a new GOP in seconds
+GOP=3
+XFCE_ORIGINAL_TERMINAL_FONT=`cat ~/.config/xfce4/terminal/terminalrc | grep "^FontName"`
+XFCE_TERMINAL_FONT="Liberation Mono for Powerline 18"
+X11_SCREEN0_DISPLAY=":0.0"
+# If you're capturing X11 at a different framerate to the camera, make sure the
+# two are integer multiples to avoid weird frame duplication in the final
+# video.
+X11_SCREEN0_FRAMERATE=15
+# By default we capture the entire screen.
+X11_SCREEN0_RESOLUTION="1920x1080"
+
+setup_screencast() {
+    for cmd in unclutter xdotool; do
+        which $cmd 2>&1 > /dev/null || ( echo "'$cmd' not installed" > /dev/stderr ; exit 1 )
+    done
+
+
+    # Basic checks that we're a) going to record what we want b) not going to mess up our recording.
+    if [ `sysctl -n kern.audio.record` -ne 1 ]; then
+        echo "sysctl kern.audio.record is not set to 1!" 2>&1
+        exit 1
+    fi
+
+    if [ `pgrep "^vi$" | wc -l ` -gt 0 ]; then
+        echo "Won't start while there active 'vi' processes." > /dev/stderr
+        exit 1
+    fi
+
+    apm -H
+
+    projector ${X11_SCREEN0_RESOLUTION}
+    sed -i "s/^FontName.*\$/FontName=${XFCE_TERMINAL_FONT}/g" ~/.config/xfce4/terminal/terminalrc
+
+    # Set the XFCE background to a solid colour without an image.
+    r=`python3 -c "print((($BACKGROUND_COLOUR >> 16) & 255) / float(0xFF))"`
+    g=`python3 -c "print((($BACKGROUND_COLOUR >> 8) & 255) / float(0xFF))"`
+    b=`python3 -c "print(($BACKGROUND_COLOUR & 255) / float(0xFF))"`
+    for wksp in `xfconf-query -c xfce4-desktop -l | grep -E "screen0.*(HDMI|monitor|eDP)-?[0-9]/workspace0" | cut -d "/" -f 1-5 | sort -u`; do
+        echo $wksp
+        xfconf-query --create -c xfce4-desktop -p ${wksp}/rgba1 \
+            -t double -t double -t double -t double -s $r -s $g -s $b -s 1 || true
+        xfconf-query -c xfce4-desktop -p ${wksp}/image-style -s 0 || true
+        xfconf-query -c xfce4-desktop -p ${wksp}/color-style -s 0 || true
+    done
+
+    unclutter -idle 2 &
+
+    screenkey -t 1 --opacity 0 -g "400x60+1-1" -p fixed --no-whitespace \
+        -f "Liberation Mono for Powerline Bold" --no-systray \
+        --ignore "Control_L" \
+        --ignore "F1" --ignore "F2" --ignore "F3" --ignore "F4" --ignore "F5" \
+        --ignore "F6" --ignore "F7" --ignore "F8" --ignore "F9" --ignore "F10" \
+        --ignore "F11" --ignore "F12" --persist --start-disabled &
+
+    gromit-mpx &
+    # gromit-mpx:
+    #   Activate/Deactviate drawing: Shift+F12
+    #   Clear window: Shift+F11
+    #   Toggle window visibility: Shift+F10
+    #   Undo: Shift+F9
+    #   Redo: Shift+F8
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F12" \
+        --create --type string --set "gromit-mpx -t"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F11" \
+        --create --type string --set "gromit-mpx -c"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F10" \
+        --create --type string --set "gromit-mpx -v"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F9" \
+        --create --type string --set "gromit-mpx -z"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F8" \
+        --create --type string --set "gromit-mpx -y"
+
+    markers_dir=`pwd`
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F1" \
+        --create --type string --set "`which epochtime` $markers_dir/markers safepoint"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F2" \
+        --create --type string --set "`which epochtime` $markers_dir/markers rewind"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F3" \
+        --create --type string --set "`which epochtime` $markers_dir/markers fastforward"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F4" \
+        --create --type string --set "`which epochtime` $markers_dir/markers manual"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F5" \
+        --create --type string --set "`which epochtime` $markers_dir/markers undo"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F6" \
+        --create --type string --set "`which epochtime` $markers_dir/markers camera"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F7" \
+        --create --type string --set "`which epochtime` $markers_dir/markers mixed"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F8" \
+        --create --type string --set "`which epochtime` $markers_dir/markers screen"
+
+    # Ensure that even if the script is killed we restart everything.
+    for n in `echo "$APPS_MK_INVISIBLE"`; do
+        winf=`xwininfo -name $n`
+        wid=`echo "$winf" | grep "Window id:" | head -n 1 | cut -d ":" -f 3 | cut -d " " -f 2`
+        xdotool windowminimize $wid || true
+    done
+
+    for n in `echo "$APPS_STOP"`; do
+        pkill -SIGSTOP "^$n$" || true
+    done
+
+    video -d
+    video white_balance_temperature=5600 saturation=140 contrast=150 gain=20
+}
+
+# This function can be called more than once, so it must be safe to "restart"
+# applications that are not actually stopped.
+restore_settings() {
+    projector normal
+    sed -i "s/^FontName.*\$/${XFCE_ORIGINAL_TERMINAL_FONT}/g" ~/.config/xfce4/terminal/terminalrc
+
+    # Restore desktop background image.
+    for wksp in `xfconf-query -c xfce4-desktop -l | grep -E "screen0.*(HDMI|monitor|eDP)-?[0-9]/workspace0" | cut -d "/" -f 1-5 | sort -u`; do
+        xfconf-query -c xfce4-desktop -p ${wksp}/image-style -s 5
+    done
+    pkill unclutter || true
+    pkill gromit-mpx || true
+    ps -auxww | grep python | grep screenkey | cut -d " " -f 2- |sed -E "s/^ *//" | cut -d " " -f 1 | xargs -r kill || true
+
+    # Remove the gromit-mpx keybindings
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F12" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F11" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F10" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F9" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F8" -r
+
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F1" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F2" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F3" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F4" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F5" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F6" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F7" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F8" -r
+
+    for n in `echo "$APPS_MK_INVISIBLE"`; do
+        winf=`xwininfo -name $n`
+        wid=`echo "$winf" | grep "Window id:" | head -n 1 | cut -d ":" -f 3 | cut -d " " -f 2`
+        xdotool windowmap $wid || true
+    done
+
+    for n in `echo "$APPS_STOP"`; do
+        pkill -SIGCONT $n || true
+    done
+
+    apm -A
+}
+
+# Manually kill apps.
+kill_apps() {
+    pkill "^redshift$" || true
+}
+
+# Manually restart apps.
+unkill_apps() {
+    redshift-gtk &
+}

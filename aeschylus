@@ -1,0 +1,173 @@
+#! /usr/bin/env zsh
+
+set -e
+
+cleanup() {
+    unkill_apps
+    restore_settings
+}
+
+if [ $# -lt 1 ]; then
+    echo "Usage:\n  screencast <config> -test\n  screencast <config> <directory>"
+    exit 1
+fi
+
+. $1
+
+for cmd in ffmpeg ffmpeg-normalize ffplay python3; do
+    which $cmd 2>&1 > /dev/null || ( echo "'$cmd' not installed" > /dev/stderr ; exit 1 )
+done
+
+if [ $2 = "-test" ]; then
+    setup_screencast
+    kill_apps
+    trap cleanup SIGEXIT SIGTERM
+
+    sleep 1
+    tmpdir=`mktemp -d`
+    ffmpeg \
+      -f x11grab -video_size $X11_SCREEN0_RESOLUTION -i $X11_SCREEN0_DISPLAY \
+      -vcodec png -frames:v 1 $tmpdir/screen.png
+
+    ffmpeg \
+      -thread_queue_size 1024 \
+      -i $tmpdir/screen.png \
+      -f v4l2 -framerate $CAMERA_FRAMERATE -video_size $CAMERA_RESOLUTION -input_format mjpeg -i $CAMERA_DEVICE \
+      -filter_complex "[1:v]crop=${MINI_CAMERA_CROP},hqdn3d=4:4:3:3,scale=${CAMERA_SCALE}[camera]; \
+                       [0:v][camera]overlay=${CAMERA_OVERLAY}[v]" \
+      -map "[v]" -f yuv4mpegpipe -pix_fmt yuv444p - | \
+      ffplay -fs -
+
+    ffmpeg \
+      -thread_queue_size 1024 \
+      -i $tmpdir/screen.png \
+      -f v4l2 -framerate $CAMERA_FRAMERATE -video_size $CAMERA_RESOLUTION -input_format mjpeg -i $CAMERA_DEVICE \
+      -filter_complex "[1:v]crop=${MINI_CAMERA_CROP},hqdn3d=4:4:3:3,${CHROMAKEY},scale=${CAMERA_SCALE}[camera]; \
+                       [0:v][camera]overlay=${CAMERA_OVERLAY}[v]" \
+      -map "[v]" -f yuv4mpegpipe -pix_fmt yuv444p - | \
+      ffplay -fs -
+
+    rm -f $screen
+    exit 0
+fi
+
+mkdir -p $2
+cd $2
+
+recorded=0
+if [ ! -f camera0.nut ]; then
+    setup_screencast
+    kill_apps
+    trap cleanup SIGEXIT SIGTERM
+
+    # We record the screen into one file and camera and audio into another.
+    echo "===> Recording. Press 'q' to stop recording and start post-processing."
+    sleep 0.5
+    ffmpeg \
+      -use_wallclock_as_timestamps 1 \
+      -f v4l2 \
+        -thread_queue_size 1024 \
+        -framerate $CAMERA_FRAMERATE -video_size $CAMERA_RESOLUTION -input_format mjpeg \
+        -i $CAMERA_DEVICE \
+      -f $AUDIO_DRIVER \
+        -thread_queue_size 1024 \
+        -ar $AUDIO_RATE -sample_fmt ${AUDIO_FMT} \
+        -i $AUDIO_DEVICE \
+      -f x11grab \
+        -thread_queue_size 1024 \
+        -probesize 128M \
+        -framerate $X11_SCREEN0_FRAMERATE -video_size $X11_SCREEN0_RESOLUTION \
+        -i $X11_SCREEN0_DISPLAY \
+      -map "0:v,1:a" -map "1:a" -c:v copy -c:a flac -compression_level 0 -copyts -timestamp now camera0.nut \
+      -map "2:v,1:a" -c:v libx264rgb -preset ultrafast -crf 0 -copyts -timestamp now screen0.nut
+    sleep 0.5
+
+    restore_settings
+    trap - SIGEXIT SIGTERM
+    cleanup
+    recorded=1
+fi
+
+if [ ! -f pre_edit.mkv ]; then
+    if [ $recorded -eq 1 ]; then
+        echo -n "Combine into a single file? Warning: slow! [Y/n] "
+        read combine
+        if [ "X$combine" = "Xn" ]; then
+            exit 0
+        fi
+    fi
+
+    echo "===> Combine into a single pre-edit file"
+    # Combine everything into one file, converting inputs to the same
+    # framerate, overlaying the camera in the bottom right of the video, and
+    # converting the audio to mono, producing a video that can then be edited
+    # in shotcut.
+    if [ $CAMERA_FRAMERATE -gt $X11_SCREEN0_FRAMERATE ]; then
+        framerate=$CAMERA_FRAMERATE
+    else
+        framerate=$X11_SCREEN0_FRAMERATE
+    fi
+
+    echo -n "Create pre_edit.mkv only? [Y/n] "
+    read mix_file
+    # Keyframe settings from:
+    #   https://superuser.com/questions/908280/what-is-the-correct-way-to-fix-keyframes-in-ffmpeg-for-dash/1223359#1223359
+    if [ "X$mix_file" = "Xn" ]; then
+        exit 1
+    else
+        gop=`python3 -c "print(${GOP} * ${framerate})"`
+        gop2=`python3 -c "print(${GOP} * ${framerate} * 2)"`
+        cat << EOF > Makefile.header
+AUDIO_FMT=${AUDIO_FMT}
+AUDIO_RATE=${AUDIO_RATE}
+FRAMERATE=${framerate}
+MINI_CAMERA_CROP="${MINI_CAMERA_CROP}"
+MINI_CAMERA_SCALE="${MINI_CAMERA_SCALE}"
+CHROMAKEY="${CHROMAKEY}"
+CAMERA_OVERLAY="${CAMERA_OVERLAY}"
+GOP=${gop}
+GOP2=${gop2}
+EOF
+        markers_to_makefile
+        make -j `python3 -c "import os; print(os.cpu_count() // 2)"`
+        echo "===> Pre_edit file: $2/pre_edit_mixed.mkv"
+    fi
+    echo -n "Run external editor? [N/y]: "
+    read run_shotcut
+    if [ "X${run_shotcut}" = "Xy" ]; then
+        echo "===> Edit and write to: $2/edit.mkv so that final video processing can occur"
+        exit 0
+    fi
+fi
+
+echo -n "Produce final edit from pre_edit.mkv? [Y/n] "
+read edit_from_preedit
+if [ "X${edit_from_preedit}" = "Xn" ]; then
+    edit_file="edit.mkv"
+else
+    edit_file="pre_edit.mkv"
+fi
+
+if [ -f ${edit_file} -a ! -f audio_normalised.flac ]; then
+    podcast_audio_process ${edit_file} audio_normalised.flac
+fi
+
+if [ -f ${edit_file} -a -f audio_normalised.flac -a ! -f final.nut ]; then
+    echo "===> Combine video and normalised audio"
+    # Combine edit.nut and audio_normalised.flac into the final video.
+    ffmpeg \
+        -i ${edit_file} \
+        -i audio_normalised.flac \
+        -map "0:v:0" -map "1:a:0" \
+        -c copy \
+        -copyts \
+        final.mkv
+fi
+
+if [ -f ${edit_file} -a ! -f final.mp4 ]; then
+    echo -n "Produce final.mp4 from final.nut? [Ny] "
+    read produce_mp4
+    if [ "X${produce_mp4}" = "XY" -o "X${produce_mp4}" = "Xy" ]; then
+        ffmpeg -i final.mkv -c:v copy -c:a aac -b:a 320k -copyts final.mp4
+    fi
+fi

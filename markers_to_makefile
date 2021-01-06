@@ -1,0 +1,271 @@
+#! /usr/bin/env python3
+
+import os, subprocess, sys, time
+from decimal import Decimal
+
+INPUT_FILES = [("camera0.nut", "v:0"), ("camera0.nut", "a:0"), ("screen0.nut", "v:0")]
+
+def first_frame_times():
+    i = 1
+    times = []
+    for path, stream in INPUT_FILES:
+        # Get the wall-clock time of the first frame
+        c = subprocess.run([\
+                "ffprobe", \
+                "-i", path, \
+                "-show_frames", \
+                "-select_streams", stream, \
+                "-print_format", "flat", \
+                "-read_intervals", "%+#10"], \
+            capture_output=True, stderr=None)
+        assert c.returncode == 0
+
+        for l in c.stdout.decode().split("\n"):
+            if "pkt_pts_time=" in l:
+                times.append(int(Decimal(l.split("=")[1].replace("\"", "")) * 1000))
+                break
+    return times
+
+def remove_undos(markers):
+    i = 0
+    while i < len(markers):
+        if markers[i][1] == "undo":
+            del markers[i]
+            if i > 0:
+                del markers[i - 1]
+                i -= 1
+        else:
+            i += 1
+
+def remove_first_rewinds(start_time, markers):
+    # We have to treat the first rewind(s) differently
+    default_scene = "mixed_scene"
+    current_scene = default_scene
+    i = 0
+    seg_start = start_time
+    time_deleted = 0
+    while i < len(markers):
+        (tm, tag) = markers[i]
+        if tag == "safepoint":
+            break
+        elif tag == "rewind":
+            time_deleted = markers[i][0] - start_time
+            seg_start = markers[i][0]
+            del markers[0:i+1]
+            i = 0
+        elif tag in ["camera0_scene", "mixed_scene", "screen0_scene"]:
+            current_scene = tag
+        else:
+            i += 1
+    return (seg_start, time_deleted, current_scene)
+
+def process_scenes(start_time, markers, seg_start, time_deleted, current_scene):
+    edit_markers = []
+    manual_markers = []
+    scenes = []
+    i = 0
+    while i < len(markers):
+        (tm, tag) = markers[i]
+        if tag == "safepoint":
+            scenes.append((current_scene, seg_start - start_time, tm - start_time))
+            seg_start = tm
+            i += 1
+            j = i
+            while j < len(markers):
+                if markers[j][1] == "safepoint":
+                    break
+                elif markers[j][1] == "rewind":
+                    time_deleted += markers[j][0] - seg_start
+                    seg_start = markers[j][0]
+                    del markers[i:j + 1]
+                    j = i
+                elif tag in ["camera0", "mixed", "screen0"]:
+                    current_scene = tag
+                else:
+                    j += 1
+        elif tag in ["camera0_scene", "mixed_scene", "screen0_scene"]:
+            scenes.append((current_scene, seg_start - start_time, tm - start_time))
+            seg_start = tm
+            current_scene = tag
+            i += 1
+        elif tag == "fastforward":
+            t = seg_start - start_time - time_deleted
+            if len(edit_markers) == 0 or edit_markers[-1] != t:
+                edit_markers.append(t)
+            scenes.append((current_scene, seg_start - start_time, tm - start_time))
+            i += 1
+            if i == len(markers):
+                seg_start = None
+                break
+            seg_start = markers[i + 1][0]
+        elif tag == "marker":
+            manual_markers.append(tm - start_time - time_deleted)
+            i += 1
+        else:
+            print("Unknown tag '%s'" % tag)
+            sys.exit(1)
+
+    with open("edit_markers", "w") as f:
+        for t in edit_markers:
+            f.write("%s\n" % time.strftime("%H:%M:%S", time.gmtime(float(t) / 1000.0)))
+
+    with open("manual_markers", "w") as f:
+        for t in manual_markers:
+            f.write("%s\n" % time.strftime("%H:%M:%S", time.gmtime(float(t) / 1000.0)))
+
+    i = 0
+    while i + 1 < len(scenes):
+        if scenes[i][0] == scenes[i + 1][0] and scenes[i][2] == scenes[i + 1][1]:
+            scenes[i] = (scenes[i][0], scenes[i][1], scenes[i + 1][2])
+            del scenes[i + 1]
+        else:
+            i += 1
+
+    return scenes
+
+def scene_selects(scenes, scene):
+    out = []
+    for (i, (s, f, t)) in enumerate(scenes):
+        if s != scene:
+            continue
+        out.append((f"scene_{i}.nut", f"between(t\\,{f / 1000.0}\\,{t / 1000.0})"))
+    return out
+
+def main():
+    times = first_frame_times()
+    start_time = times[0]
+
+    if not os.path.exists("markers"):
+        print("gte(t\\, 0)")
+        sys.exit(0)
+
+    markers = []
+    with open("markers") as f:
+        for l in f:
+            l = l.strip()
+            if len(l) == 0:
+                continue
+            l = l.split(" ")
+            markers.append((int(float(l[0]) * 1000), l[1]))
+    markers.sort(key=lambda x: x[0])
+
+    remove_undos(markers)
+    (seg_start, time_deleted, current_scene) = remove_first_rewinds(start_time, markers)
+    scenes = process_scenes(start_time, markers, seg_start, time_deleted, current_scene)
+
+    with open("Makefile", "w") as f:
+        start_time = times[0]
+        camera0_trim = f"{(times[0] - start_time) / 1000.0}s"
+        audio_trim = f"{(times[1] - start_time) / 1000.0}s"
+        screen0_trim = f"{(times[2] - start_time) / 1000.0}s"
+
+        f.write(open("Makefile.header", "r").read())
+
+        scene_paths = ["scene_%d.nut" % i for i in range(len(scenes))]
+        f.write(f"""\npre_edit.mkv: {" ".join(scene_paths)}""")
+
+        concat = "".join([f"[{i}:v:0][{i}:a:0]" for i in range(len(scenes))])
+        f.write(f"""
+	ffmpeg -i {" -i ".join(scene_paths)} \\
+	  -filter_complex "{concat}concat=n={len(scenes)}:v=1:a=1[v][a]" \\
+	  -map "[a]" \\
+	  -map "[v]" \\
+	  -c:v libx264 -crf 0 -preset fast -async 1 \\
+	  -force_key_frames "expr:eq(mod(n,${{GOP}}),0)" -x264opts "rc-lookahead=${{GOP}}:keyint=${{GOP2}}:min-keyint=${{GOP}}" \\
+	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
+	  pre_edit.mkv
+
+""")
+
+        for path, select in scene_selects(scenes, "camera0_scene"):
+            f.write(f"""{path}: camera0.nut screen0.nut
+	ffmpeg \\
+	  -i camera0.nut \\
+	  -i screen0.nut \\
+	  -filter_complex "[0:a]atrim='{audio_trim}', \\
+	                        aselect='{select}', \\
+	                        asetpts=N/SR/TB, \\
+	                        pan=mono|c0=c0+c1 \\
+	                   [a]; \\
+	                   [0:v]fps=fps=${{FRAMERATE}}, \\
+	                        select='{select}', \\
+	                        setpts=N/FRAME_RATE/TB, \\
+	                        crop=${{MINI_CAMERA_CROP}}, \\
+	                        hqdn3d=4:4:3:3, \\
+	                        ${{CHROMAKEY}} \\
+	                   [camera0]; \\
+	                   [1:v]trim='{screen0_trim}', \\
+	                        fps=fps=${{FRAMERATE}}, \\
+	                        select='{select}', \\
+	                        setpts=N/FRAME_RATE/TB \\
+	                   [screen0]; \\
+	                   [screen0][camera0] \\
+	                        overlay=shortest=1:${{CAMERA_OVERLAY}} \\
+	                   [v]" \\
+	  -map "[a]" \\
+	  -map "[v]" \\
+	  -c:v libx264 -crf 0 -preset superfast -async 1 \\
+	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
+          {path}
+
+""")
+
+        for path, select in scene_selects(scenes, "mixed_scene"):
+            f.write(f"""{path}: camera0.nut screen0.nut
+	ffmpeg \\
+	  -i camera0.nut \\
+	  -i screen0.nut \\
+	  -filter_complex "[0:a]atrim='{audio_trim}', \\
+	                        aselect='{select}', \\
+	                        asetpts=N/SR/TB, \\
+	                        pan=mono|c0=c0+c1 \\
+	                   [a]; \\
+	                   [0:v]fps=fps=${{FRAMERATE}}, \\
+	                        select='{select}', \\
+	                        setpts=N/FRAME_RATE/TB, \\
+	                        crop=${{MINI_CAMERA_CROP}}, \\
+	                        scale=${{MINI_CAMERA_SCALE}}, \\
+	                        hqdn3d=4:4:3:3, \\
+	                        ${{CHROMAKEY}} \\
+	                   [camera0]; \\
+	                   [1:v]trim='{screen0_trim}', \\
+	                        fps=fps=${{FRAMERATE}}, \\
+	                        select='{select}', \\
+	                        setpts=N/FRAME_RATE/TB \\
+	                   [screen0]; \\
+	                   [screen0][camera0] \\
+	                        overlay=shortest=1:${{CAMERA_OVERLAY}} \\
+	                   [v]" \\
+	  -map "[a]" \\
+	  -map "[v]" \\
+	  -c:v libx264 -crf 0 -preset superfast -async 1 \\
+	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
+          {path}
+
+""")
+
+        for path, select in scene_selects(scenes, "screen0_scene"):
+            f.write(f"""{path}: camera0.nut screen0.nut
+	ffmpeg \\
+	  -i camera0.nut \\
+	  -i screen0.nut \\
+	  -filter_complex "[0:a]atrim='{audio_trim}', \\
+	                        aselect='{select}', \\
+	                        asetpts=N/SR/TB, \\
+	                        pan=mono|c0=c0+c1 \\
+	                   [a]; \\
+	                   [1:v]trim='{screen0_trim}', \\
+	                        fps=fps=${{FRAMERATE}}, \\
+	                        select='{select}', \\
+	                        setpts=N/FRAME_RATE/TB \\
+	                   [v]" \\
+	  -map "[a]" \\
+	  -map "[v]" \\
+	  -c:v libx264 -crf 0 -preset superfast -async 1 \\
+	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
+          {path}
+
+""")
+
+if __name__ == "__main__":
+    main()

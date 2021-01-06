@@ -1,0 +1,58 @@
+AUDIO_DEVICE="hw:0"
+AUDIO_DRIVER="alsa"
+# In order to prevent audio being continually converted between formats --
+# which can downgrade the quality -- the following two settings should match
+# whatever your audio interface is set to.
+AUDIO_FMT="s16"
+AUDIO_RATE="48000"
+MINI_CAMERA_CROP="700:490:350:160"
+MINI_CAMERA_SCALE="470:-1"
+CAMERA_DEVICE="/dev/video0"
+# If you're capturing the camera at a different framerate to X11, make sure the
+# two are integer multiples to avoid weird frame duplication in the final
+# video.
+CAMERA_FRAMERATE=30
+# Where to place the camera overlay.
+CAMERA_OVERLAY="x=W-w+60:y=H-h+1"
+CAMERA_RESOLUTION="1280x720"
+# If you don't have a greenscreen, set this to "null"
+CHROMAKEY="null"
+# How often to generate a new GOP in seconds
+GOP=3
+X11_SCREEN0_DISPLAY=":0.0"
+# If you're capturing X11 at a different framerate to the camera, make sure the
+# two are integer multiples to avoid weird frame duplication in the final
+# video.
+X11_SCREEN0_FRAMERATE=15
+# By default we capture the entire screen.
+X11_SCREEN0_RESOLUTION="1920x1080"
+
+setup_screencast() {
+    markers_dir=`pwd`
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F1" \
+        --create --type string --set "`which epochtime` $markers_dir/markers safepoint"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F2" \
+        --create --type string --set "`which epochtime` $markers_dir/markers rewind"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F3" \
+        --create --type string --set "`which epochtime` $markers_dir/markers fastforward"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F4" \
+        --create --type string --set "`which epochtime` $markers_dir/markers manual"
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F5" \
+        --create --type string --set "`which epochtime` $markers_dir/markers undo"
+}
+
+restore_settings() {
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F1" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F2" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F3" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F4" -r
+    xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F5" -r
+}
+
+kill_apps() {
+    true
+}
+
+unkill_apps() {
+    true
+}

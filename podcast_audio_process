@@ -1,0 +1,64 @@
+#! /bin/sh
+
+set -e
+
+AUDIO_FMT="s16"
+AUDIO_RATE="44100"
+
+if [ $# -ne 2 ]; then
+    echo "podcast_audio_process <input.flac> <output.flac>" > /dev/stderr
+    exit 1
+fi
+
+for cmd in audacity ffmpeg ffmpeg-normalize python3 ; do
+    which $cmd 2> /dev/null > /dev/null || ( echo "'$cmd' not installed" > /dev/stderr ; exit 1 )
+done
+
+while [ true ]; do
+    echo -n "Average signal level ([dB (e.g. -18) | audacity]): "
+    read signal_level
+    if [ $signal_level = "audacity" ]; then
+        audacity $1 2> /dev/null > /dev/null || true
+    else
+        break
+    fi
+done
+
+td=`mktemp -d`
+
+echo "===> Apply noisegate and compressor to audio"
+# Apply a noisegate and then a compressor to the mono audio. For guidance on
+# compression see e.g.:
+#   https://gist.github.com/scottburton11/3222152
+#   https://music.tutsplus.com/tutorials/a-master-guide-to-voice-compression-how-to--compress-voice-recordings--cms-25105
+# For the noisegate see e.g.:
+#   https://www.youtube.com/embed/piXenxM355o?rel=0
+# I'm a little more conservative with my noisegate settings, since it's better
+# not to overdo it.
+noisegate_threshold=`python3 -c "print(${signal_level} - 20)"`
+compressor_lower_threshold=`python3 -c "print(${signal_level} - 9)"`
+compressor_upper_threshold=`python3 -c "print(${signal_level} + 3)"`
+ffmpeg \
+  -i $1 \
+  -filter_complex "[0:a]pan=mono|c0=c0+c1[a]; \
+                   [a]highpass=frequency=80[a]; \
+                   [a]agate=mode=downward:range=-15dB:threshold=${noisegate_threshold}dB: \
+                      ratio=3:attack=1.5:release=120:knee=10dB[a]; \
+                   [a]ladspa=file=sc4m_1916:p=sc4m:c=c0=0|c1=1.5ms|c2=4ms| \
+                      c3=${compressor_upper_threshold}db|c4=6|c5=3db[a];
+                   [a]ladspa=file=sc4m_1916:p=sc4m:c=c0=0|c1=2ms|c2=12ms| \
+                      c3=${compressor_lower_threshold}db|c4=2|c5=8db[a]
+                      " \
+  -map "[a]" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 9 \
+  -copyts \
+  ${td}/audio_gated_compressed.flac
+
+echo "===> Normalise audio"
+# Normalise the audio and produce a final mkv file. Podcasts typically vary
+# between -16 and -20 LUFS.
+ffmpeg-normalize ${td}/audio_gated_compressed.flac -o $2 -c:a flac  \
+    -t -18 -lrt 10 -tp -1 --dual-mono \
+    -ar ${AUDIO_RATE} -e "-compression_level 9 -sample_fmt ${AUDIO_FMT} -copyts" -pr
+
+rm -rf ${td}
