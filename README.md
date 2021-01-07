@@ -165,3 +165,64 @@ sound great, but it probably won't mangle it beyond recognition.
 Aeschylus has some support for different types of scene (e.g. screen only,
 screen with camera): this at least partly works, but isn't tested, so is left
 undocumented for now.
+
+
+# Under the hood
+
+Aeschylus works by associating time stamps with markers and, when recording is
+complete, using those to edit videos. For example here is a `markers` file
+after a recording:
+
+  1609515923.285604 rewind
+  1609515934.217265 safepoint
+  1609515958.586696 rewind
+  1609515972.216318 fastforward
+
+The long numbers are times in seconds since the Unix epoch, allowing us to tell
+when those markers were recorded in "wall-clock time" (in this case,
+approximately 2021-01-01 15:45) down to a fraction of a second. This will lead
+to a video which trims the start (the first `rewind`), then has a retake
+(editing out the recording between the `safepoint` and the second `rewind`) and
+then trimming the end (the `fastforward`).
+
+However, by default, most video recording programs (including ffmpeg) record
+time relative to the beginning of the recording, with no way of associating it
+with an external clock. In ffmpeg's case we can force it to record wall-clock
+timestamps instead with `-use_wallclock_as_timestamps` and `-copyts`:
+
+    ffmpeg \
+      -use_wallclock_as_timestamps 1 \
+      -f v4l2 -i /dev/video0 \
+      -map "0:v" -copyts recording.mkv
+
+There are obvious potential problems with clock synchronisation in this setup:
+ffmpeg's clock(s) is not necessarily the same as that used as `epochtime`.
+Indeed, ffmpeg uses more than one clock source internally, depending on your
+input device(s) and other options. Typically ffmpeg uses the "normal" system
+clock or a "monotonic" clock (but e.g. on Linux it mostly uses
+`CLOCK_MONOTONIC`, which isn't properly monotonic; although you can force the
+`v4l2` backend, although virtually nothing else in ffmpeg to use
+`CLOCK_MONOTONIC_RAW`). As this suggests, the situation is something of a mess.
+Although I couldn't find any real documentation for this feature, the option I
+settled on is to force all recorded streams to synchronise to the clock used to
+record audio (in my case, that's the non-monotonic system clock) using the `,`
+syntax in `-map`:
+
+    ffmpeg \
+      -use_wallclock_as_timestamps 1 \
+      -f v4l2 -i /dev/video0 \
+      -f sndio -i snd/0 \
+      -map "0:v,1:a" -map "1:a" -copyts recording.mkv
+
+In my case I believe this works because the OpenBSD `sndio` backend uses the
+non-monotonic system clock. If, for example, it used the monotonic system
+clock, `epochtime` would need to use that clock to prevent the `markers` file
+having inaccurate data.
+
+A better solution is when you can get the current recording timestamp from your
+recording software: this would prevent all the messing around, and possible
+problems with, the system clock. I have no experience with such software but
+something like [this plugin for
+OBS](https://obsproject.com/forum/resources/infowriter.345/) might do the trick
+if you use OBS (though the description does suggest it only records times to
+the resolution of a second, which, if true, wouldn't be sufficient for me).
