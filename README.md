@@ -225,7 +225,7 @@ non-monotonic system clock. If, for example, it used the monotonic system
 clock, `epochtime` would need to use that clock to prevent the `markers` file
 having inaccurate data.
 
-A better solution is when you can get the current recording timestamp from your
+A better solution would be to get the current recording timestamp from your
 recording software: this would prevent all the messing around, and possible
 problems with, the system clock. I have no experience with such software but
 something like [this plugin for
