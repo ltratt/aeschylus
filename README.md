@@ -232,3 +232,8 @@ something like [this plugin for
 OBS](https://obsproject.com/forum/resources/infowriter.345/) might do the trick
 if you use OBS (though the description does suggest it only records times to
 the resolution of a second, which, if true, wouldn't be sufficient for me).
+
+`markers_to_makefile` then takes in the marker information and creates a
+`Makefile` which processes each scene individually before merging them
+altogether. The `Makefile` tends to have a high degree of parallelism in it, so
+when it's running it is likely to use your CPU fairly intensively.
