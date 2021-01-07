@@ -15,7 +15,7 @@ might serve as inspiration for someone to build, or extend, a more robust
 system in the same vein.
 
 
-# My requirements
+## My requirements
 
 To give you a rough idea of what problem Aeschylus solves, I wanted a system which:
 
@@ -36,7 +36,7 @@ Things I didn't care about:
  * Readability.
 
 
-# Setting Aeschylus up
+## Setting Aeschylus up
 
 Aeschylus takes as its first argument a configuration file, which is a zsh
 script. You need to set the following variables in your configuration file:
@@ -110,7 +110,7 @@ audio: this definitely won't work in all cases, but seems to work OK for simple
 cases.
 
 
-# Running Aeschylus
+## Running Aeschylus
 
 To quickly test whether Aeschylus will even vaguely run, 
 
@@ -148,7 +148,7 @@ that the `.mkv` file is lossless, and a better format for uploading to e.g.
 YouTube.
 
 
-# Audio processing
+## Audio processing
 
 I've included my audio processing script, which makes audio better sounding --
 for me. If you record in a noisy area, it might not sound very good, but feel
@@ -160,14 +160,14 @@ you're not sure what to do here, type "-18" -- it might not make the output
 sound great, but it probably won't mangle it beyond recognition.
 
 
-# Multiple scene types
+## Multiple scene types
 
 Aeschylus has some support for different types of scene (e.g. screen only,
 screen with camera): this at least partly works, but isn't tested, so is left
 undocumented for now.
 
 
-# Under the hood
+## Under the hood
 
 Aeschylus works by associating time stamps with markers and, when recording is
 complete, using those to edit videos. For example here is a `markers` file
