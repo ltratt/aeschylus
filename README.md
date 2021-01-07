@@ -136,15 +136,16 @@ $ aeschylus linux_xfce test1
 
 For reasons that I don't understand, the first and last second or so of an
 ffmpeg recording is often slightly wonky and/or chopped. I therefore suggest
-waiting a couple of seconds, pressing `Rewind`, and then starting your actual
-screencast. Talk as long as you want, set `Safepoint`s, make `Rewind`s. When
-you're ready to finish press `FastForward`, wait at least 1 second and then go
-to the terminal running aeschylus and press `q`. Aeschylus will then start
-editing the video. The edited-but-not-audio-processed version will be in
-`<output dir>/pre_edit.mkv`. If you choose to use audio processing, that will
-be processed further into `<output dir>/final.mkv` and, if you request it,
-`<output dir>/final.mp4`. Note that the `.mkv` file is lossless, and a better
-format for uploading to e.g. YouTube.
+waiting a couple of seconds, pressing `rewind`, and then starting your actual
+screencast. Talk as long as you want, set `safepoint`s, make `rewind`s. When
+you're ready to finish press `fastforward`, wait at least 1 second and then go
+to the terminal running aeschylus and press `q` to stop the ffmpeg recording
+process. Aeschylus will then start editing the video. The
+edited-but-not-audio-processed version will be in `<output dir>/pre_edit.mkv`.
+If you choose to use audio processing, that will be processed further into
+`<output dir>/final.mkv` and, if you request it, `<output dir>/final.mp4`. Note
+that the `.mkv` file is lossless, and a better format for uploading to e.g.
+YouTube.
 
 
 # Audio processing
