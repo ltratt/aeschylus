@@ -150,14 +150,18 @@ YouTube.
 
 ## Audio processing
 
-I've included my audio processing script, which makes audio better sounding --
-for me. If you record in a noisy area, it might not sound very good, but feel
-free to give it a go. When Aeschylus comes to process audio, it will ask you
-for a signal level. You can type `audacity` in here, which will load your audio
-file up. You then need to play the audio and observe the "typical" peak dB
-level. Quit Audacity, type that number in, and wait to see what happens. If
-you're not sure what to do here, type "-18" -- it might not make the output
-sound great, but it probably won't mangle it beyond recognition.
+I've included my audio processing script `podcast_audio_process`, which makes
+audio better sounding -- for me. If you record in a noisy area, it might not
+sound very good, but feel free to give it a go. When Aeschylus comes to process
+audio, it will ask you for a signal level. You can type `audacity` in here,
+which will load the audio track from the combined video. You then need to play
+at least a portion of the audio and observe the "typical" peak dB level. Quit
+Audacity, type that number in, and `podcast_audio_process` will apply a
+highpass, a noisegate, a compressor-as-limiter, a "proper" compressor, before
+running `ffmpeg-normalize` to produce a consistent audio level. If you're not
+sure what to do here, type "-18" and see if you prefer the output before or
+after. If you don't like what's going on, it shouldn't be too difficult to
+disable `podcast_audio_process`.
 
 
 ## Multiple scene types
