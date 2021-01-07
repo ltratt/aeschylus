@@ -173,10 +173,12 @@ Aeschylus works by associating time stamps with markers and, when recording is
 complete, using those to edit videos. For example here is a `markers` file
 after a recording:
 
-  1609515923.285604 rewind
-  1609515934.217265 safepoint
-  1609515958.586696 rewind
-  1609515972.216318 fastforward
+```
+1609515923.285604 rewind
+1609515934.217265 safepoint
+1609515958.586696 rewind
+1609515972.216318 fastforward
+```
 
 The long numbers are times in seconds since the Unix epoch, allowing us to tell
 when those markers were recorded in "wall-clock time" (in this case,
