@@ -32,8 +32,12 @@ To give you a rough idea of what problem Aeschylus solves, I wanted a system whi
 
 Things I didn't care about:
 
- * Portability.
- * Readability.
+ * Support for streaming: Aeschylus is meant for producing offline videos.
+ * Readability: I didn't know what I wanted, or what I was doing, when I
+   started this, so the code is something of a mess.
+ * Portability: Aeschylus started out as OpenBSD/XFCE-only, though I have
+   loosened those restrictions somewhat (e.g. it at least minimally works on
+   Linux).
 
 
 ## Setting Aeschylus up
