@@ -79,7 +79,9 @@ X11_SCREEN0_RESOLUTION="1920x1080"
 On Unix, you can probably copy most of the above, at least at first, but you'll
 almost certainly need to change `AUDIO_DEVICE` and `AUDIO_DRIVER` at a minimum.
 
-You also need to define the following functions:
+You also need to define the following functions which setup/teardown any setup
+for the screencast (e.g. I kill/suspend several applications I don't want
+appearing in the video), though you can leave all of their bodies blank:
 
 ```
 setup_screencast() {}
