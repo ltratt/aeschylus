@@ -53,8 +53,16 @@ def remove_first_rewinds(start_time, markers):
             seg_start = markers[i][0]
             del markers[0:i+1]
             i = 0
+            j = 1
+            while j < len(markers):
+                if markers[j][1] == "rewind":
+                    break
+                elif markers[j][1] == "safepoint":
+                    return (seg_start, time_deleted, current_scene)
+                j += 1
         elif tag in ["camera0_scene", "mixed_scene", "screen0_scene"]:
             current_scene = tag
+            i += 1
         else:
             i += 1
     return (seg_start, time_deleted, current_scene)
