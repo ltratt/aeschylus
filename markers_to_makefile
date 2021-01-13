@@ -112,6 +112,18 @@ def process_scenes(start_time, markers, seg_start, time_deleted, current_scene):
         else:
             print("Unknown tag '%s'" % tag)
             sys.exit(1)
+    if seg_start != None:
+        c = subprocess.run([\
+                "ffprobe",
+                "-v", "error",
+                "-i", "camera0.nut",
+                "-select_streams", "a:0",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1"], \
+            capture_output=True, stderr=None)
+        assert c.returncode == 0
+        last_frame_time = int(Decimal(c.stdout.decode().strip()) * 1000)
+        scenes.append((current_scene, seg_start - start_time, last_frame_time - start_time))
 
     with open("edit_markers", "w") as f:
         for t in edit_markers:
