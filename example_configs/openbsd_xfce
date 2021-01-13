@@ -18,10 +18,10 @@ MINI_CAMERA_SCALE="470:-1"
 # If your audio/video are out of sync, use an audio sync test video such as:
 #   24fps https://www.youtube.com/watch?v=lXcZSY4XCDc
 #   30fps https://www.youtube.com/watch?v=TjAa0wOe5k4
-# If your camera footage is behind the audio, this variable should be negative;
-# if the camera footage is ahead of the audio it should be positive. Time in
-# seconds.
-CAMERA_OFF="0"
+# If your camera footage is behind the audio, this variable should be positive;
+# if the camera footage is ahead of the audio it should be negative. Time in
+# milliseconds. For autodetect, use the string "auto".
+CAMERA_LATENCY="175"
 CAMERA_DEVICE="/dev/video0"
 # If you're capturing the camera at a different framerate to X11, make sure the
 # two are integer multiples to avoid weird frame duplication in the final

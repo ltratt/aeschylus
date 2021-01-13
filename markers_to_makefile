@@ -152,8 +152,14 @@ def scene_selects(scenes, scene):
     return out
 
 def main():
+    if len(sys.argv) != 2:
+        sys.stderr.write("Usage: markers_to_makefile <auto|camera_latency_in_ms>\n")
+        sys.exit(1)
     times = first_frame_times()
-    start_time = times[0]
+    if sys.argv[1] == "auto":
+        start_time = times[0]
+    else:
+        start_time = times[1] + int(sys.argv[1])
 
     if not os.path.exists("markers"):
         print("gte(t\\, 0)")
@@ -174,7 +180,6 @@ def main():
     scenes = process_scenes(start_time, markers, seg_start, time_deleted, current_scene)
 
     with open("Makefile", "w") as f:
-        start_time = times[0]
         camera0_trim = f"{(times[0] - start_time) / 1000.0}s"
         audio_trim = f"{(times[1] - start_time) / 1000.0}s"
         screen0_trim = f"{(times[2] - start_time) / 1000.0}s"

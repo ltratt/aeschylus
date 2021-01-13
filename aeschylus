@@ -128,7 +128,7 @@ CAMERA_OVERLAY="${CAMERA_OVERLAY}"
 GOP=${gop}
 GOP2=${gop2}
 EOF
-        markers_to_makefile
+        markers_to_makefile ${CAMERA_LATENCY}
         make -j `python3 -c "import os; print(os.cpu_count() // 2)"`
         echo "===> Pre_edit file: $2/pre_edit_mixed.mkv"
     fi

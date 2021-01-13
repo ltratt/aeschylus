@@ -60,6 +60,13 @@ CAMERA_DEVICE="/dev/video0"
 # two are integer multiples to avoid weird frame duplication in the final
 # video.
 CAMERA_FRAMERATE=30
+# If your audio/video are out of sync, use an audio sync test video such as:
+#   24fps https://www.youtube.com/watch?v=lXcZSY4XCDc
+#   30fps https://www.youtube.com/watch?v=TjAa0wOe5k4
+# If your camera footage is behind the audio, this variable should be positive;
+# if the camera footage is ahead of the audio it should be negative. Time in
+# milliseconds. For autodetect, use the string "auto".
+CAMERA_LATENCY="auto"
 # Where to place the camera overlay.
 CAMERA_OVERLAY="x=W-w+60:y=H-h+1"
 CAMERA_RESOLUTION="1280x720"
@@ -111,9 +118,12 @@ xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Sh
   --create --type string --set "`which epochtime` $markers_dir/markers safepoint"
 ```
 
-Note that Aeschylus tries to automatically synchronise screen, camera, and
-audio: this definitely won't work in all cases, but seems to work OK for simple
-cases.
+Note that Aeschylus automatically synchronises screen, camera, and audio if
+`CAMERA_LATENCY="auto"`. This typically works well enough for "dedicated"
+webcams but separate capture cards, in particular, tend to introduce extra
+latency beyond that which can be auto-detected. In such cases, you will need to
+manually determine the latency between the audio and camera and set
+`CAMERA_LATENCY` to an appropriate value.
 
 
 ## Running Aeschylus
