@@ -117,11 +117,11 @@ setup_screencast() {
     xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F5" \
         --create --type string --set "`which epochtime` $markers_dir/markers undo"
     xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F6" \
-        --create --type string --set "`which epochtime` $markers_dir/markers camera"
+        --create --type string --set "`which epochtime` $markers_dir/markers camera0_scene"
     xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F7" \
-        --create --type string --set "`which epochtime` $markers_dir/markers mixed"
+        --create --type string --set "`which epochtime` $markers_dir/markers mixed_scene"
     xfconf-query --channel xfce4-keyboard-shortcuts --property "/commands/custom/<Shift>F8" \
-        --create --type string --set "`which epochtime` $markers_dir/markers screen"
+        --create --type string --set "`which epochtime` $markers_dir/markers screen0_scene"
 
     # Ensure that even if the script is killed we restart everything.
     for n in `echo "$APPS_MK_INVISIBLE"`; do
