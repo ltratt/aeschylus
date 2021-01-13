@@ -212,15 +212,15 @@ def main():
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
-	                   [0:v]fps=fps=${{FRAMERATE}}, \\
+                           [0:v]fps=fps=${{FRAMERATE}}:round=down, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB, \\
 	                        crop=${{MINI_CAMERA_CROP}}, \\
 	                        hqdn3d=4:4:3:3, \\
 	                        ${{CHROMAKEY}} \\
 	                   [camera0]; \\
-	                   [1:v]trim='{screen0_trim}', \\
-	                        fps=fps=${{FRAMERATE}}, \\
+	                   [1:v]null, \\
+	                        fps=fps=${{FRAMERATE}}:round=down, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB \\
 	                   [screen0]; \\
@@ -245,7 +245,7 @@ def main():
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
-	                   [0:v]fps=fps=${{FRAMERATE}}, \\
+	                   [0:v]fps=fps=${{FRAMERATE}}:round=down, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB, \\
 	                        crop=${{MINI_CAMERA_CROP}}, \\
@@ -253,8 +253,8 @@ def main():
 	                        hqdn3d=4:4:3:3, \\
 	                        ${{CHROMAKEY}} \\
 	                   [camera0]; \\
-	                   [1:v]trim='{screen0_trim}', \\
-	                        fps=fps=${{FRAMERATE}}, \\
+	                   [1:v]null, \\
+	                        fps=fps=${{FRAMERATE}}:round=down, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB \\
 	                   [screen0]; \\
@@ -279,8 +279,8 @@ def main():
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
-	                   [1:v]trim='{screen0_trim}', \\
-	                        fps=fps=${{FRAMERATE}}, \\
+	                   [1:v]null, \\
+	                        fps=fps=${{FRAMERATE}}:round=down, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB \\
 	                   [v]" \\
