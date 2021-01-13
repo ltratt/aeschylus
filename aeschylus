@@ -33,7 +33,7 @@ if [ $2 = "-test" ]; then
       -thread_queue_size 1024 \
       -i $tmpdir/screen.png \
       -f v4l2 -framerate $CAMERA_FRAMERATE -video_size $CAMERA_RESOLUTION -input_format mjpeg -i $CAMERA_DEVICE \
-      -filter_complex "[1:v]crop=${MINI_CAMERA_CROP},hqdn3d=4:4:3:3,scale=${CAMERA_SCALE}[camera]; \
+      -filter_complex "[1:v]crop=${MINI_CAMERA_CROP},hqdn3d=4:4:3:3,scale=${MINI_CAMERA_SCALE}[camera]; \
                        [0:v][camera]overlay=${CAMERA_OVERLAY}[v]" \
       -map "[v]" -f yuv4mpegpipe -pix_fmt yuv444p - | \
       ffplay -fs -
@@ -42,7 +42,7 @@ if [ $2 = "-test" ]; then
       -thread_queue_size 1024 \
       -i $tmpdir/screen.png \
       -f v4l2 -framerate $CAMERA_FRAMERATE -video_size $CAMERA_RESOLUTION -input_format mjpeg -i $CAMERA_DEVICE \
-      -filter_complex "[1:v]crop=${MINI_CAMERA_CROP},hqdn3d=4:4:3:3,${CHROMAKEY},scale=${CAMERA_SCALE}[camera]; \
+      -filter_complex "[1:v]crop=${MINI_CAMERA_CROP},hqdn3d=4:4:3:3,${CHROMAKEY},scale=${MINI_CAMERA_SCALE}[camera]; \
                        [0:v][camera]overlay=${CAMERA_OVERLAY}[v]" \
       -map "[v]" -f yuv4mpegpipe -pix_fmt yuv444p - | \
       ffplay -fs -
