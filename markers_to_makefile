@@ -214,7 +214,7 @@ def main():
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
-                           [0:v]fps=fps=${{FRAMERATE}}:round=down, \\
+                       [0:v]fps=fps=${{FRAMERATE}}, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB, \\
 	                        crop=${{MINI_CAMERA_CROP}}, \\
@@ -244,7 +244,7 @@ def main():
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
-	                   [0:v]fps=fps=${{FRAMERATE}}:round=down, \\
+	                   [0:v]fps=fps=${{FRAMERATE}}, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB, \\
 	                        crop=${{MINI_CAMERA_CROP}}, \\
@@ -253,7 +253,7 @@ def main():
 	                        ${{CHROMAKEY}} \\
 	                   [camera0]; \\
 	                   [1:v]null, \\
-	                        fps=fps=${{FRAMERATE}}:round=down, \\
+	                        fps=fps=${{FRAMERATE}}, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB \\
 	                   [screen0]; \\
@@ -279,7 +279,7 @@ def main():
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
 	                   [1:v]null, \\
-	                        fps=fps=${{FRAMERATE}}:round=down, \\
+	                        fps=fps=${{FRAMERATE}}, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB \\
 	                   [v]" \\
