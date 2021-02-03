@@ -184,7 +184,7 @@ def main():
 
     with open("Makefile", "w") as f:
         camera0_trim = f"{(times[0] - start_time) / 1000.0}s"
-        audio_trim = f"{(times[1] - start_time) / 1000.0}s"
+        audio_trim = f"{(start_time - times[1]) / 1000.0}s"
         screen0_trim = f"{(times[2] - start_time) / 1000.0}s"
 
         f.write(open("Makefile.header", "r").read())
@@ -209,8 +209,8 @@ def main():
             f.write(f"""{path}: camera0.nut
 	ffmpeg \\
 	  -i camera0.nut \\
-	  -filter_complex "[0:a]atrim='{audio_trim}', \\
-	                        aselect='{select}', \\
+	  -itsoffset {audio_trim} -i camera0.nut \\
+	  -filter_complex "[1:a]aselect='{select}', \\
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
@@ -238,9 +238,9 @@ def main():
             f.write(f"""{path}: camera0.nut screen0.nut
 	ffmpeg \\
 	  -i camera0.nut \\
+	  -itsoffset {audio_trim} -i camera0.nut \\
 	  -i screen0.nut \\
-	  -filter_complex "[0:a]atrim='{audio_trim}', \\
-	                        aselect='{select}', \\
+	  -filter_complex "[1:a]aselect='{select}', \\
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
@@ -252,7 +252,7 @@ def main():
 	                        hqdn3d=4:4:3:3, \\
 	                        ${{CHROMAKEY}} \\
 	                   [camera0]; \\
-	                   [1:v]null, \\
+	                   [2:v]null, \\
 	                        fps=fps=${{FRAMERATE}}, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB \\
@@ -271,10 +271,9 @@ def main():
         for path, select in scene_selects(scenes, "screen0_scene"):
             f.write(f"""{path}: camera0.nut screen0.nut
 	ffmpeg \\
-	  -i camera0.nut \\
+	  -itsoffset {audio_trim} -i camera0.nut \\
 	  -i screen0.nut \\
-	  -filter_complex "[0:a]atrim='{audio_trim}', \\
-	                        aselect='{select}', \\
+	  -filter_complex "[0:a]aselect='{select}', \\
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
