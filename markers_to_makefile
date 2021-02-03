@@ -140,6 +140,9 @@ def process_scenes(start_time, markers, seg_start, time_deleted, current_scene):
 
     return scenes
 
+def scenes_with_delay(scenes, delay):
+    return [(s[0], s[1] - delay, s[2] - delay) for s in scenes]
+
 def scene_selects(scenes, scene):
     out = []
     for (i, (s, f, t)) in enumerate(scenes):
@@ -155,8 +158,10 @@ def main():
     times = first_frame_times()
     if sys.argv[1] == "auto":
         start_time = times[0]
+        delay = (max(times) - min(times))
     else:
-        start_time = times[1] + int(sys.argv[1])
+        delay = int(sys.argv[1])
+        start_time = times[1] + delay
 
     if not os.path.exists("markers"):
         print("gte(t\\, 0)")
@@ -175,6 +180,7 @@ def main():
     remove_undos(markers)
     (seg_start, time_deleted, current_scene) = remove_first_rewinds(start_time, markers)
     scenes = process_scenes(start_time, markers, seg_start, time_deleted, current_scene)
+    scenes = scenes_with_delay(scenes, delay)
 
     with open("Makefile", "w") as f:
         camera0_trim = f"{(times[0] - start_time) / 1000.0}s"
