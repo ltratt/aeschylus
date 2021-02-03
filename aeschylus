@@ -115,7 +115,7 @@ if [ ! -f pre_edit.mkv ]; then
     if [ "X$mix_file" = "Xn" ]; then
         exit 1
     else
-        latency=`python3 -c "print(${framerate} * round(${CAMERA_LATENCY} / ${framerate}))"`
+        latency=`python3 -c "print(round((1000.0 / ${framerate}) * round(float(${CAMERA_LATENCY})/(1000.0 / ${framerate}))))"`
         gop=`python3 -c "print(${GOP} * ${framerate})"`
         gop2=`python3 -c "print(${GOP} * ${framerate} * 2)"`
         cat << EOF > Makefile.header
