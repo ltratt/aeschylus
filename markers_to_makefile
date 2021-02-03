@@ -203,10 +203,9 @@ def main():
 """)
 
         for path, select in scene_selects(scenes, "camera0_scene"):
-            f.write(f"""{path}: camera0.nut screen0.nut
+            f.write(f"""{path}: camera0.nut
 	ffmpeg \\
 	  -i camera0.nut \\
-	  -i screen0.nut \\
 	  -filter_complex "[0:a]atrim='{audio_trim}', \\
 	                        aselect='{select}', \\
 	                        asetpts=N/SR/TB, \\
@@ -219,10 +218,7 @@ def main():
 	                        hqdn3d=4:4:3:3, \\
 	                        ${{CHROMAKEY}} \\
 	                   [camera0]; \\
-	                   [1:v]null, \\
-	                        fps=fps=${{FRAMERATE}}:round=down, \\
-	                        select='{select}', \\
-	                        setpts=N/FRAME_RATE/TB \\
+                       color=c='${{BACKGROUND_COLOUR}}':r=${{FRAMERATE}}:s=${{CAMERA_RESOLUTION}} \\
 	                   [screen0]; \\
 	                   [screen0][camera0] \\
 	                        overlay=shortest=1:${{CAMERA_OVERLAY}} \\
