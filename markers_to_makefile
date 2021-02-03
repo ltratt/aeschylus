@@ -55,13 +55,6 @@ def remove_first_rewinds(start_time, markers):
             seg_start = markers[i][0]
             del markers[0:i+1]
             i = 0
-            j = 1
-            while j < len(markers):
-                if markers[j][1] == "rewind":
-                    break
-                elif markers[j][1] == "safepoint":
-                    return (seg_start, time_deleted, current_scene)
-                j += 1
         elif tag in ["camera0_scene", "mixed_scene", "screen0_scene"]:
             current_scene = tag
             i += 1
@@ -82,17 +75,19 @@ def process_scenes(start_time, markers, seg_start, time_deleted, current_scene):
             i += 1
             j = i
             while j < len(markers):
-                if markers[j][1] == "safepoint":
+                if markers[j][1] in ("safepoint", "fastforward"):
                     break
                 elif markers[j][1] == "rewind":
                     time_deleted += markers[j][0] - seg_start
                     seg_start = markers[j][0]
                     del markers[i:j + 1]
                     j = i
-                elif tag in ["camera0", "mixed", "screen0"]:
-                    current_scene = tag
-                else:
+                elif markers[j][1] in ["camera0_scene", "mixed_scene", "screen0_scene"]:
+                    current_scene = markers[j][1]
                     j += 1
+                else:
+                    print("Unknown tag '%s'" % markers[j][1])
+                    sys.exit(1)
         elif tag in ["camera0_scene", "mixed_scene", "screen0_scene"]:
             scenes.append((current_scene, seg_start - start_time, tm - start_time))
             seg_start = tm
