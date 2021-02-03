@@ -2,7 +2,7 @@
 APPS_MK_INVISIBLE="gkrellm xfce4-panel"
 # Processes which you wish to suspend with SIGSTOP during recording. They
 # will be resumed with SIGCONT when recording has finished.
-APPS_STOP="extsmaild chromium firefox gimp iridium thunderbird xfce4-panel xfce4-notifyd"
+APPS_STOP="extsmaild chromium firefox gimp inkscape iridium thunderbird xfce4-panel xfce4-notifyd"
 AUDIO_DEVICE="snd/0"
 AUDIO_DRIVER="sndio"
 # In order to prevent audio being continually converted between formats --
@@ -13,15 +13,15 @@ AUDIO_RATE="44100"
 # The desktop background will be set to this colour.
 #BACKGROUND_COLOUR="0x263127"
 BACKGROUND_COLOUR="0x595959"
-MINI_CAMERA_CROP="1400:1000:400:160"
-MINI_CAMERA_SCALE="470:-1"
+MINI_CAMERA_CROP="1400:1000:330:0"
+MINI_CAMERA_SCALE="550:-1"
 # If your audio/video are out of sync, use an audio sync test video such as:
 #   24fps https://www.youtube.com/watch?v=lXcZSY4XCDc
 #   30fps https://www.youtube.com/watch?v=TjAa0wOe5k4
 # If your camera footage is behind the audio, this variable should be positive;
 # if the camera footage is ahead of the audio it should be negative. Time in
 # milliseconds. For autodetect, use the string "auto".
-CAMERA_LATENCY="175"
+CAMERA_LATENCY="240"
 CAMERA_DEVICE="/dev/video0"
 # If you're capturing the camera at a different framerate to X11, make sure the
 # two are integer multiples to avoid weird frame duplication in the final
@@ -29,9 +29,9 @@ CAMERA_DEVICE="/dev/video0"
 CAMERA_FRAMERATE=30
 # Where to place the camera overlay.
 CAMERA_OVERLAY="x=W-w+0:y=H-h+1"
-CAMERA_RESOLUTION="1900x1080"
+CAMERA_RESOLUTION="1920x1080"
 # If you don't have a greenscreen, set this to "null"
-CHROMAKEY="chromakey=85a869:0.045:0.007,despill=type=green:mix=0.5:expand=0.3:brightness=0:green=-1:blue=0"
+CHROMAKEY="chromakey=274d07:0.04:0.02,despill=type=green:mix=0.5:expand=0.3:brightness=0:green=-1:blue=0"
 # How often to generate a new GOP in seconds
 GOP=3
 XFCE_ORIGINAL_TERMINAL_FONT=`cat ~/.config/xfce4/terminal/terminalrc | grep "^FontName"`
