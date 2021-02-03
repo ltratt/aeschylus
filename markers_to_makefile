@@ -16,14 +16,16 @@ def first_frame_times():
                 "-show_frames", \
                 "-select_streams", stream, \
                 "-print_format", "flat", \
-                "-read_intervals", "%+#10"], \
+                "-read_intervals", "%+#2"], \
             capture_output=True, stderr=None)
         assert c.returncode == 0
 
+        ts = []
         for l in c.stdout.decode().split("\n"):
             if "pkt_pts_time=" in l:
-                times.append(int(Decimal(l.split("=")[1].replace("\"", "")) * 1000))
-                break
+                ts.append(int(Decimal(l.split("=")[1].replace("\"", "")) * 1000))
+        assert(len(ts) == 2)
+        times.append(ts[0] - (ts[1] - ts[0]))
     return times
 
 def remove_undos(markers):
