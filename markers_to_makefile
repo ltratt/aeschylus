@@ -198,7 +198,7 @@ def main():
 	  -filter_complex "{concat}concat=n={len(scenes)}:v=1:a=1[v][a]" \\
 	  -map "[a]" \\
 	  -map "[v]" \\
-	  -c:v libx264 -crf 0 -preset fast -async 1 \\
+	  -c:v libx264 -crf 0 -preset veryslow -async 1 \\
 	  -force_key_frames "expr:eq(mod(n,${{GOP}}),0)" -x264opts "rc-lookahead=${{GOP}}:keyint=${{GOP2}}:min-keyint=${{GOP}}" \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
 	  pre_edit.mkv
