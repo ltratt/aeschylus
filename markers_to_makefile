@@ -218,7 +218,7 @@ def main():
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB, \\
 	                        crop=${{MINI_CAMERA_CROP}}, \\
-	                        hqdn3d=4:4:3:3, \\
+	                        vaguedenoiser, \\
 	                        ${{CHROMAKEY}} \\
 	                   [camera0]; \\
                        color=c='${{BACKGROUND_COLOUR}}':r=${{FRAMERATE}}:s=${{CAMERA_RESOLUTION}} \\
@@ -248,8 +248,8 @@ def main():
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB, \\
 	                        crop=${{MINI_CAMERA_CROP}}, \\
+                                vaguedenoiser, \\
 	                        scale=${{MINI_CAMERA_SCALE}}, \\
-	                        hqdn3d=4:4:3:3, \\
 	                        ${{CHROMAKEY}} \\
 	                   [camera0]; \\
 	                   [2:v]null, \\

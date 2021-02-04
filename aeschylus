@@ -29,6 +29,7 @@ if [ $2 = "-test" ]; then
       -f x11grab -video_size $X11_SCREEN0_RESOLUTION -i $X11_SCREEN0_DISPLAY \
       -vcodec png -frames:v 1 $tmpdir/screen.png
 
+    # We use hqdn3d because this needs to be processing in more-or-less realtime.
     ffmpeg \
       -thread_queue_size 1024 \
       -i $tmpdir/screen.png \
