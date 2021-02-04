@@ -132,7 +132,7 @@ GOP=${gop}
 GOP2=${gop2}
 EOF
         markers_to_makefile ${latency}
-        make -j `python3 -c "import os; print(os.cpu_count() // 2)"`
+        make -j `python3 -c "import os; print(int(os.cpu_count() * (3/4)))"`
         echo "===> Pre_edit file: $2/pre_edit_mixed.mkv"
     fi
     echo -n "Run external editor? [N/y]: "
