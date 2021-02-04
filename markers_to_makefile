@@ -203,6 +203,24 @@ def main():
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
 	  pre_edit.mkv
 
+camera0_test:
+	ffmpeg \\
+	  -i camera0.nut \\
+	  -filter_complex \\
+	    "[0:a]asetpts=N/SR/TB,pan=mono|c0=c0+c1[a]; \\
+	     [0:v]fps=fps=${{FRAMERATE}}, \\
+	          crop=${{MINI_CAMERA_CROP}}, \\
+	          vaguedenoiser, \\
+	          ${{CHROMAKEY}} \\
+	     [camera0]; \\
+	          color=c='${{BACKGROUND_COLOUR}}':r=${{FRAMERATE}}:s=${{CAMERA_RESOLUTION}} \\
+	     [screen0]; \\
+	     [screen0][camera0] \\
+	          overlay=shortest=1:${{CAMERA_OVERLAY}} \\
+	     [v]" \\
+	  -map "[a]" -map "[v]" \\
+          -f nut -c:v libx264 -crf 0 -preset ultrafast -c:a flac - | ffplay -fs -
+
 """)
 
         for path, select in scene_selects(scenes, "camera0_scene"):
