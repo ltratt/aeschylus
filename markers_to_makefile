@@ -219,7 +219,7 @@ camera0_test:
 	          overlay=shortest=1:${{CAMERA_OVERLAY}} \\
 	     [v]" \\
 	  -map "[a]" -map "[v]" \\
-          -f nut -c:v libx264 -crf 0 -preset ultrafast -c:a flac - | ffplay -fs -
+      -f nut -c:v libx264 -crf 0 -preset ultrafast -c:a flac - | ffplay -fs -
 
 """)
 
