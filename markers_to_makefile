@@ -183,7 +183,7 @@ def main():
     scenes = scenes_with_delay(scenes, delay)
 
     with open("Makefile", "w") as f:
-        audio_off = f"{(start_time - times[1]) / 1000.0}s"
+        audio_off = f"{(start_time - times[1]) / 1000.0}"
 
         f.write(open("Makefile.header", "r").read())
 
@@ -225,8 +225,8 @@ camera0_test:
             f.write(f"""{path}: camera0.nut
 	ffmpeg \\
 	  -i camera0.nut \\
-	  -itsoffset {audio_off} -i camera0.nut \\
-	  -filter_complex "[1:a]aselect='{select}', \\
+	  -filter_complex "[0:a]asetpts=PTS+{audio_off}/TB, \\
+                            aselect='{select}', \\
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
@@ -244,7 +244,7 @@ camera0_test:
 	                   [v]" \\
 	  -map "[a]" \\
 	  -map "[v]" \\
-	  -c:v libx264 -crf 0 -preset superfast -async 1 \\
+	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
           {path}
 
@@ -254,9 +254,9 @@ camera0_test:
             f.write(f"""{path}: camera0.nut screen0.nut
 	ffmpeg \\
 	  -i camera0.nut \\
-	  -itsoffset {audio_off} -i camera0.nut \\
 	  -i screen0.nut \\
-	  -filter_complex "[1:a]aselect='{select}', \\
+	  -filter_complex "[0:a]asetpts=PTS+{audio_off}/TB, \\
+                            aselect='{select}', \\
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
@@ -268,7 +268,7 @@ camera0_test:
 	                        scale=${{MINI_CAMERA_SCALE}}, \\
 	                        ${{CHROMAKEY}} \\
 	                   [camera0]; \\
-	                   [2:v]null, \\
+	                   [1:v]null, \\
 	                        fps=fps=${{FRAMERATE}}, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB \\
@@ -278,7 +278,7 @@ camera0_test:
 	                   [v]" \\
 	  -map "[a]" \\
 	  -map "[v]" \\
-	  -c:v libx264 -crf 0 -preset superfast -async 1 \\
+	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
           {path}
 
@@ -287,9 +287,10 @@ camera0_test:
         for path, select in scene_selects(scenes, "screen0_scene"):
             f.write(f"""{path}: camera0.nut screen0.nut
 	ffmpeg \\
-	  -itsoffset {audio_off} -i camera0.nut \\
+	  -i camera0.nut \\
 	  -i screen0.nut \\
-	  -filter_complex "[0:a]aselect='{select}', \\
+	  -filter_complex "[0:a]asetpts=PTS+{audio_off}/TB, \\
+                            aselect='{select}', \\
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
@@ -300,7 +301,7 @@ camera0_test:
 	                   [v]" \\
 	  -map "[a]" \\
 	  -map "[v]" \\
-	  -c:v libx264 -crf 0 -preset superfast -async 1 \\
+	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
           {path}
 
