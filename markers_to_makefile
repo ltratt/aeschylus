@@ -245,7 +245,7 @@ camera0_test:
 	  -map "[a]" \\
 	  -map "[v]" \\
 	  -c:v libx264 -crf 0 -preset superfast \\
-	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
+	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
           {path}
 
 """)
@@ -279,7 +279,7 @@ camera0_test:
 	  -map "[a]" \\
 	  -map "[v]" \\
 	  -c:v libx264 -crf 0 -preset superfast \\
-	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
+	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
           {path}
 
 """)
@@ -302,7 +302,7 @@ camera0_test:
 	  -map "[a]" \\
 	  -map "[v]" \\
 	  -c:v libx264 -crf 0 -preset superfast \\
-	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
+	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
           {path}
 
 """)
