@@ -268,8 +268,7 @@ camera0_test:
 	                        scale=${{MINI_CAMERA_SCALE}}, \\
 	                        ${{CHROMAKEY}} \\
 	                   [camera0]; \\
-	                   [1:v]null, \\
-	                        fps=fps=${{FRAMERATE}}, \\
+	                   [1:v]fps=fps=${{FRAMERATE}}, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB \\
 	                   [screen0]; \\
@@ -294,8 +293,7 @@ camera0_test:
 	                        asetpts=N/SR/TB, \\
 	                        pan=mono|c0=c0+c1 \\
 	                   [a]; \\
-	                   [1:v]null, \\
-	                        fps=fps=${{FRAMERATE}}, \\
+	                   [1:v]fps=fps=${{FRAMERATE}}, \\
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB \\
 	                   [v]" \\
