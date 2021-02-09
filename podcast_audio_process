@@ -50,7 +50,7 @@ ffmpeg \
                       c3=${compressor_lower_threshold}db|c4=2|c5=8db[a]
                       " \
   -map "[a]" \
-  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 9 \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 12 \
   -copyts \
   ${td}/audio_gated_compressed.flac
 
