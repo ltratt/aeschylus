@@ -264,7 +264,7 @@ camera0_test:
 	                        select='{select}', \\
 	                        setpts=N/FRAME_RATE/TB, \\
 	                        crop=${{MINI_CAMERA_CROP}}, \\
-                                vaguedenoiser, \\
+                            vaguedenoiser, \\
 	                        scale=${{MINI_CAMERA_SCALE}}, \\
 	                        ${{CHROMAKEY}} \\
 	                   [camera0]; \\
