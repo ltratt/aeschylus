@@ -143,12 +143,12 @@ def process_scenes(start_time, markers, seg_start, time_deleted, current_scene):
 def scenes_with_delay(scenes, delay):
     return [(s[0], s[1] - delay, s[2] - delay) for s in scenes]
 
-def scene_selects(scenes, scene):
+def scene_selects(start_time, scenes, scene):
     out = []
     for (i, (s, f, t)) in enumerate(scenes):
         if s != scene:
             continue
-        out.append((f"scene_{i}.nut", f"between(t\\,{f / 1000.0}\\,{t / 1000.0})"))
+        out.append((start_time + f, f"scene_{i}.nut", f"between(t\\,{f / 1000.0}\\,{t / 1000.0})"))
     return out
 
 def main():
@@ -221,8 +221,8 @@ camera0_test:
 
 """)
 
-        for path, select in scene_selects(scenes, "camera0_scene"):
-            f.write(f"""{path}: camera0.nut
+        for orig_time, path, select in scene_selects(start_time, scenes, "camera0_scene"):
+            f.write(f"""{path}: camera0.nut # Approx. start {str(orig_time)}
 	ffmpeg \\
 	  -i camera0.nut \\
 	  -filter_complex "[0:a]asetpts=PTS+{audio_off}/TB, \\
@@ -250,8 +250,8 @@ camera0_test:
 
 """)
 
-        for path, select in scene_selects(scenes, "mixed_scene"):
-            f.write(f"""{path}: camera0.nut screen0.nut
+        for orig_time, path, select in scene_selects(start_time, scenes, "mixed_scene"):
+            f.write(f"""{path}: camera0.nut screen0.nut # Approx. start {str(orig_time)}
 	ffmpeg \\
 	  -i camera0.nut \\
 	  -i screen0.nut \\
@@ -283,8 +283,8 @@ camera0_test:
 
 """)
 
-        for path, select in scene_selects(scenes, "screen0_scene"):
-            f.write(f"""{path}: camera0.nut screen0.nut
+        for orig_time, path, select in scene_selects(start_time, scenes, "screen0_scene"):
+            f.write(f"""{path}: camera0.nut screen0.nut # Approx. start {str(orig_time)}
 	ffmpeg \\
 	  -i camera0.nut \\
 	  -i screen0.nut \\
