@@ -25,7 +25,7 @@ def first_frame_times():
             if "pkt_pts_time=" in l:
                 ts.append(int(Decimal(l.split("=")[1].replace("\"", "")) * 1000))
         assert(len(ts) == 2)
-        times.append(ts[0] - (ts[1] - ts[0]))
+        times.append(ts[0] - 700)
     return times
 
 def remove_undos(markers):
