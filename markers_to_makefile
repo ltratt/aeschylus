@@ -4,7 +4,8 @@ import os, subprocess, sys, time
 from decimal import Decimal
 
 INPUT_FILES = [("camera0.nut", "v:0"), ("camera0.nut", "a:0"), ("screen0.nut", "v:0")]
-MAKEFILE_CHUNKS = 8
+MAKEFILE_CAMERA_CHUNKS = 20
+MAKEFILE_SCREEN_CHUNKS = 7
 
 def first_frame_times():
     i = 1
@@ -225,7 +226,7 @@ camera0_test:
 
 """)
 
-        for ss in chunk(scene_selects(start_time, scenes, "camera0_scene"), MAKEFILE_CHUNKS):
+        for ss in chunk(scene_selects(start_time, scenes, "camera0_scene"), MAKEFILE_CAMERA_CHUNKS):
             f.write(f"""{" ".join([x[1] for x in ss])}: camera0.nut
 	ffmpeg \\
 	  -i camera0.nut \\
@@ -271,67 +272,114 @@ camera0_test:
                 if i < len(ss) - 1:
                     f.write(" \\")
                 else:
-                    f.write("\n\n")
+                    f.write("\n")
 
-        for ss in chunk(scene_selects(start_time, scenes, "mixed_scene"), 1):
-            f.write(f"""{" ".join([x[1] for x in ss])}: camera0.nut screen0.nut
+        # Split apart screen0 for the mixed_scene
+        for ss in chunk(scene_selects(start_time, scenes, "mixed_scene"), MAKEFILE_SCREEN_CHUNKS):
+            f.write(f"""
+{" ".join([f"{os.path.splitext(x[1])[0]}_screen0.nut" for x in ss])}: screen0.nut
 	ffmpeg \\
-	  -i camera0.nut \\
 	  -i screen0.nut \\
-	  -filter_complex "[0:a] \\
-                           asetpts=PTS+{audio_off}/TB, \\
-                           asplit={str(len(ss))} \\
-                       {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
-                       [0:v] \\
-                           fps=fps=${{FRAMERATE}}, \\
-                           split={str(len(ss))} \\
-                       {"".join([f"[camera0_{x}]" for x in range(len(ss))])}; \\
-                       [1:v] \\
-                           fps=fps=${{FRAMERATE}}, \\
-                           split={str(len(ss))} \\
-                       {"".join([f"[screen0_{x}]" for x in range(len(ss))])}; \\""")
+      -filter_complex \\
+        "[0:v] \\
+             fps=fps=${{FRAMERATE}}, \\
+             split={str(len(ss))} \\
+         {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (orig_time, path, select) in enumerate(ss):
                 f.write(f"""
-                       [a_{i}] \\
-                           aselect='{select}', \\
-	                       asetpts=N/SR/TB, \\
-	                       pan=mono|c0=c0+c1 \\
-	                   [a_{i}]; \\
-                       [camera0_{i}] \\
-	                       select='{select}', \\
-	                       setpts=N/FRAME_RATE/TB, \\
-	                       crop=${{MINI_CAMERA_CROP}}, \\
-	                       vaguedenoiser, \\
-                           scale=${{MINI_CAMERA_SCALE}},
-	                       ${{CHROMAKEY}} \\
-	                   [camera0_{i}]; \\
-                       [screen0_{i}] \\
-	                       select='{select}', \\
-	                       setpts=N/FRAME_RATE/TB \\
-	                   [screen0_{i}]; \\
-                       [screen0_{i}] \\
-                       [camera0_{i}] \\
-	                       overlay=shortest=1:${{CAMERA_OVERLAY}} \\
-	                   [v_{i}]""")
+         [v_{i}] \\
+             select='{select}', \\
+             setpts=N/FRAME_RATE/TB \\
+         [v_{i}]""")
                 if i < len(ss) - 1:
                     f.write("; \\")
+                else:
+                    f.write("\" \\")
 
-            f.write(""" \\\n                   " \\""")
             for i, (orig_time, path, select) in enumerate(ss):
                 f.write(f"""
-	  -map "[a_{i}]" \\
-	  -map "[v_{i}]" \\
-	  -c:v libx264 -crf 0 -preset superfast \\
-	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
-          {path}""")
+      -map "[v_{i}]" \\
+      -c:v libx264 -crf 0 -preset superfast \\
+        {os.path.splitext(path)[0]}_screen0.nut""")
                 if i < len(ss) - 1:
                     f.write(" \\")
                 else:
-                    f.write("\n\n")
+                    f.write("\n")
 
-        for ss in chunk(scene_selects(start_time, scenes, "screen0_scene"), MAKEFILE_CHUNKS):
-            f.write(f"""{" ".join([x[1] for x in ss])}: camera0.nut screen0.nut
+        # Split apart camera0 for the mixed_scene
+        for ss in chunk(scene_selects(start_time, scenes, "mixed_scene"), MAKEFILE_CAMERA_CHUNKS):
+            f.write(f"""
+{" ".join([f"{os.path.splitext(x[1])[0]}_camera0.nut" for x in ss])}: camera0.nut
+	ffmpeg \\
+	  -i camera0.nut \\
+      -filter_complex " \\
+         [0:a] \\
+             asetpts=PTS+{audio_off}/TB, \\
+             asplit={str(len(ss))} \\
+         {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
+         [0:v] \\
+             fps=fps=${{FRAMERATE}}, \\
+             split={str(len(ss))} \\
+         {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
+
+            for i, (orig_time, path, select) in enumerate(ss):
+                f.write(f"""
+         [a_{i}] \\
+           aselect='{select}', \\
+           asetpts=N/SR/TB, \\
+           pan=mono|c0=c0+c1 \\
+         [a_{i}]; \\
+         [v_{i}] \\
+           select='{select}', \\
+           setpts=N/FRAME_RATE/TB, \\
+           crop=${{MINI_CAMERA_CROP}}, \\
+           vaguedenoiser, \\
+           scale=${{MINI_CAMERA_SCALE}} \\
+         [v_{i}]""")
+                if i < len(ss) - 1:
+                    f.write("; \\")
+                else:
+                    f.write("\" \\")
+
+            for i, (orig_time, path, select) in enumerate(ss):
+                f.write(f"""
+      -map "[a_{i}]" \\
+      -map "[v_{i}]" \\
+      -c:v libx264 -crf 0 -preset superfast \\
+        {os.path.splitext(path)[0]}_camera0.nut""")
+                if i < len(ss) - 1:
+                    f.write(" \\")
+                else:
+                    f.write("\n")
+
+        for orig_time, path, select in scene_selects(start_time, scenes, "mixed_scene"):
+            f.write(f"""
+{path}: {os.path.splitext(path)[0]}_camera0.nut {os.path.splitext(path)[0]}_screen0.nut
+	ffmpeg \\
+        -i {os.path.splitext(path)[0]}_camera0.nut \\
+        -i {os.path.splitext(path)[0]}_screen0.nut \\
+        -filter_complex " \\
+          [0:a] \\
+            anull \\
+          [a]; \\
+          [0:v] \\
+            ${{CHROMAKEY}} \\
+          [camera0]; \\
+          [1:v] \\
+          [camera0] \\
+            overlay=shortest=1:${{CAMERA_OVERLAY}} \\
+          [v]" \\
+      -map "[a]" \\
+	  -map "[v]" \\
+	  -c:v libx264 -crf 0 -preset superfast \\
+	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
+        {path}
+""")
+
+        for ss in chunk(scene_selects(start_time, scenes, "screen0_scene"), MAKEFILE_SCREEN_CHUNKS):
+            f.write(f"""
+{" ".join([x[1] for x in ss])}: camera0.nut screen0.nut
 	ffmpeg \\
 	  -i camera0.nut \\
 	  -i screen0.nut \\
