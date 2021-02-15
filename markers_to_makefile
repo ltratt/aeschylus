@@ -29,6 +29,7 @@ def first_frame_times():
             if "pkt_pts_time=" in l:
                 ts.append(int(Decimal(l.split("=")[1].replace("\"", "")) * 1000))
         assert(len(ts) == 2)
+        # Correct for the muxer delay in ffmpeg which is 0.7s.
         times.append(ts[0] - 700)
     return times
 
@@ -285,15 +286,25 @@ camera0_test:
             m.write(f"""
 {" ".join([f"{os.path.splitext(x[2])[0]}_screen0.nut" for x in ss])}: screen0.nut
 	ffmpeg \\
-	  -i screen0.nut \\
-      -filter_complex \\
-        "[0:v] \\
+      -i camera0.nut \\
+      -i screen0.nut \\
+      -filter_complex " \\
+         [0:a] \\
+             asetpts=PTS+{audio_off}/TB, \\
+             asplit={str(len(ss))} \\
+         {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
+         [1:v] \\
              fps=fps=${{FRAMERATE}}, \\
              split={str(len(ss))} \\
          {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
+         [a_{i}] \\
+             aselect='{select}', \\
+             asetpts=N/SR/TB, \\
+             pan=mono|c0=c0+c1 \\
+         [a_{i}]; \\
          [v_{i}] \\
              select='{select}', \\
              setpts=N/FRAME_RATE/TB \\
@@ -305,6 +316,7 @@ camera0_test:
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
+      -map "[a_{i}]" \\
       -map "[v_{i}]" \\
       -c:v libx264 -crf 0 -preset superfast \\
         {os.path.splitext(path)[0]}_screen0.nut""")
