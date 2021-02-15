@@ -4,6 +4,8 @@ import os, subprocess, sys, time
 from decimal import Decimal
 
 INPUT_FILES = [("camera0.nut", "v:0"), ("camera0.nut", "a:0"), ("screen0.nut", "v:0")]
+AUDIO_FADE_TIME = 0.25 # In seconds
+AUDIO_FADE_PROPORTION = 0.3 # Between 0 and 1
 MAKEFILE_CAMERA_CHUNKS = 20
 MAKEFILE_SCREEN_CHUNKS = 7
 
@@ -142,15 +144,12 @@ def process_scenes(start_time, markers, seg_start, time_deleted, current_scene):
 
     return scenes
 
-def scenes_with_delay(scenes, delay):
-    return [(s[0], s[1] - delay, s[2] - delay) for s in scenes]
-
 def scene_selects(start_time, scenes, scene):
     out = []
     for (i, (s, f, t)) in enumerate(scenes):
         if s != scene:
             continue
-        out.append((start_time + f, f"scene_{i}.nut", f"between(t\\,{f / 1000.0}\\,{t / 1000.0})"))
+        out.append((f, t, f"scene_{i}.nut", f"between(t\\,{f / 1000.0}\\,{t / 1000.0})"))
     return out
 
 def chunk(l, n):
@@ -163,10 +162,8 @@ def main():
     times = first_frame_times()
     if sys.argv[1] == "auto":
         start_time = times[0]
-        delay = (max(times) - min(times))
     else:
-        delay = int(sys.argv[1])
-        start_time = times[1] + delay
+        start_time = times[1] + int(sys.argv[1])
 
     if not os.path.exists("markers"):
         print("gte(t\\, 0)")
@@ -185,20 +182,29 @@ def main():
     remove_undos(markers)
     (seg_start, time_deleted, current_scene) = remove_first_rewinds(start_time, markers)
     scenes = process_scenes(start_time, markers, seg_start, time_deleted, current_scene)
-    scenes = scenes_with_delay(scenes, delay)
 
-    with open("Makefile", "w") as f:
+    with open("Makefile", "w") as m:
         audio_off = f"{(start_time - times[1]) / 1000.0}"
 
-        f.write(open("Makefile.header", "r").read())
+        m.write(open("Makefile.header", "r").read())
 
         scene_paths = ["scene_%d.nut" % i for i in range(len(scenes))]
-        f.write(f"""\npre_edit.mkv: {" ".join(scene_paths)}""")
+        m.write(f"""\npre_edit.mkv: {" ".join(scene_paths)}""")
 
-        concat = "".join([f"[{i}:v:0][{i}:a:0]" for i in range(len(scenes))])
-        f.write(f"""
+        audio_concat = []
+        for i, (_, f, t) in enumerate(scenes):
+            start = (t - f) / 1000 - AUDIO_FADE_TIME
+            end = (t - f) / 1000
+            beg = f"volume=enable='between(t, 0, {AUDIO_FADE_TIME})':volume='{AUDIO_FADE_PROPORTION} + {1-AUDIO_FADE_PROPORTION} * t * {1.0/AUDIO_FADE_PROPORTION}':eval=frame"
+            end = f"volume=enable='between(t, {start}, {end})':volume='1 - {1-AUDIO_FADE_PROPORTION} * (t - {start}) * {1.0/AUDIO_FADE_PROPORTION}':eval=frame"
+            audio_concat.append(f"[{i}:a:0]{beg}, \\\n          {end}[a_{i}];")
+        audio_concat = " \\\n        ".join(audio_concat)
+        concat = "".join([f"[{i}:v:0][a_{i}]" for i in range(len(scenes))])
+        m.write(f"""
 	ffmpeg -i {" -i ".join(scene_paths)} \\
-	  -filter_complex "{concat}concat=n={len(scenes)}:v=1:a=1[v][a]" \\
+	  -filter_complex " \\
+        {audio_concat} \\
+        {concat}concat=n={len(scenes)}:v=1:a=1[v][a]" \\
 	  -map "[a]" \\
 	  -map "[v]" \\
 	  -c:v libx264 -crf 0 -preset veryslow -async 1 \\
@@ -227,7 +233,7 @@ camera0_test:
 """)
 
         for ss in chunk(scene_selects(start_time, scenes, "camera0_scene"), MAKEFILE_CAMERA_CHUNKS):
-            f.write(f"""{" ".join([x[1] for x in ss])}: camera0.nut
+            m.write(f"""{" ".join([x[2] for x in ss])}: camera0.nut
 	ffmpeg \\
 	  -i camera0.nut \\
 	  -filter_complex "[0:a] \\
@@ -239,8 +245,8 @@ camera0_test:
                            split={str(len(ss))} \\
                        {"".join([f"[camera0_{x}]" for x in range(len(ss))])}; \\""")
 
-            for i, (orig_time, path, select) in enumerate(ss):
-                f.write(f"""
+            for i, (f, t, path, select) in enumerate(ss):
+                m.write(f"""
                        [a_{i}] \\
                            aselect='{select}', \\
 	                       asetpts=N/SR/TB, \\
@@ -259,25 +265,25 @@ camera0_test:
 	                        overlay=shortest=1:${{CAMERA_OVERLAY}} \\
 	                   [v_{i}]""")
                 if i < len(ss) - 1:
-                    f.write("; \\")
+                    m.write("; \\")
 
-            f.write(""" \\\n                   " \\""")
-            for i, (orig_time, path, select) in enumerate(ss):
-                f.write(f"""
+            m.write(""" \\\n                   " \\""")
+            for i, (f, t, path, select) in enumerate(ss):
+                m.write(f"""
 	  -map "[a_{i}]" \\
 	  -map "[v_{i}]" \\
 	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
           {path}""")
                 if i < len(ss) - 1:
-                    f.write(" \\")
+                    m.write(" \\")
                 else:
-                    f.write("\n")
+                    m.write("\n")
 
         # Split apart screen0 for the mixed_scene
         for ss in chunk(scene_selects(start_time, scenes, "mixed_scene"), MAKEFILE_SCREEN_CHUNKS):
-            f.write(f"""
-{" ".join([f"{os.path.splitext(x[1])[0]}_screen0.nut" for x in ss])}: screen0.nut
+            m.write(f"""
+{" ".join([f"{os.path.splitext(x[2])[0]}_screen0.nut" for x in ss])}: screen0.nut
 	ffmpeg \\
 	  -i screen0.nut \\
       -filter_complex \\
@@ -286,31 +292,31 @@ camera0_test:
              split={str(len(ss))} \\
          {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
 
-            for i, (orig_time, path, select) in enumerate(ss):
-                f.write(f"""
+            for i, (f, t, path, select) in enumerate(ss):
+                m.write(f"""
          [v_{i}] \\
              select='{select}', \\
              setpts=N/FRAME_RATE/TB \\
          [v_{i}]""")
                 if i < len(ss) - 1:
-                    f.write("; \\")
+                    m.write("; \\")
                 else:
-                    f.write("\" \\")
+                    m.write("\" \\")
 
-            for i, (orig_time, path, select) in enumerate(ss):
-                f.write(f"""
+            for i, (f, t, path, select) in enumerate(ss):
+                m.write(f"""
       -map "[v_{i}]" \\
       -c:v libx264 -crf 0 -preset superfast \\
         {os.path.splitext(path)[0]}_screen0.nut""")
                 if i < len(ss) - 1:
-                    f.write(" \\")
+                    m.write(" \\")
                 else:
-                    f.write("\n")
+                    m.write("\n")
 
         # Split apart camera0 for the mixed_scene
         for ss in chunk(scene_selects(start_time, scenes, "mixed_scene"), MAKEFILE_CAMERA_CHUNKS):
-            f.write(f"""
-{" ".join([f"{os.path.splitext(x[1])[0]}_camera0.nut" for x in ss])}: camera0.nut
+            m.write(f"""
+{" ".join([f"{os.path.splitext(x[2])[0]}_camera0.nut" for x in ss])}: camera0.nut
 	ffmpeg \\
 	  -i camera0.nut \\
       -filter_complex " \\
@@ -323,8 +329,8 @@ camera0_test:
              split={str(len(ss))} \\
          {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
 
-            for i, (orig_time, path, select) in enumerate(ss):
-                f.write(f"""
+            for i, (f, t, path, select) in enumerate(ss):
+                m.write(f"""
          [a_{i}] \\
            aselect='{select}', \\
            asetpts=N/SR/TB, \\
@@ -338,23 +344,23 @@ camera0_test:
            scale=${{MINI_CAMERA_SCALE}} \\
          [v_{i}]""")
                 if i < len(ss) - 1:
-                    f.write("; \\")
+                    m.write("; \\")
                 else:
-                    f.write("\" \\")
+                    m.write("\" \\")
 
-            for i, (orig_time, path, select) in enumerate(ss):
-                f.write(f"""
+            for i, (f, t, path, select) in enumerate(ss):
+                m.write(f"""
       -map "[a_{i}]" \\
       -map "[v_{i}]" \\
       -c:v libx264 -crf 0 -preset superfast \\
         {os.path.splitext(path)[0]}_camera0.nut""")
                 if i < len(ss) - 1:
-                    f.write(" \\")
+                    m.write(" \\")
                 else:
-                    f.write("\n")
+                    m.write("\n")
 
-        for orig_time, path, select in scene_selects(start_time, scenes, "mixed_scene"):
-            f.write(f"""
+        for f, t, path, select in scene_selects(start_time, scenes, "mixed_scene"):
+            m.write(f"""
 {path}: {os.path.splitext(path)[0]}_camera0.nut {os.path.splitext(path)[0]}_screen0.nut
 	ffmpeg \\
         -i {os.path.splitext(path)[0]}_camera0.nut \\
@@ -378,8 +384,8 @@ camera0_test:
 """)
 
         for ss in chunk(scene_selects(start_time, scenes, "screen0_scene"), MAKEFILE_SCREEN_CHUNKS):
-            f.write(f"""
-{" ".join([x[1] for x in ss])}: camera0.nut screen0.nut
+            m.write(f"""
+{" ".join([x[2] for x in ss])}: camera0.nut screen0.nut
 	ffmpeg \\
 	  -i camera0.nut \\
 	  -i screen0.nut \\
@@ -392,8 +398,8 @@ camera0_test:
                            split={str(len(ss))} \\
                        {"".join([f"[screen0_{x}]" for x in range(len(ss))])}; \\""")
 
-            for i, (orig_time, path, select) in enumerate(ss):
-                f.write(f"""
+            for i, (f, t, path, select) in enumerate(ss):
+                m.write(f"""
                        [a_{i}] \\
                            aselect='{select}', \\
 	                       asetpts=N/SR/TB, \\
@@ -404,20 +410,20 @@ camera0_test:
                            setpts=N/FRAME_RATE/TB \\
 	                   [v_{i}]""")
                 if i < len(ss) - 1:
-                    f.write("; \\")
+                    m.write("; \\")
 
-            f.write(""" \\\n                   " \\""")
-            for i, (orig_time, path, select) in enumerate(ss):
-                f.write(f"""
+            m.write(""" \\\n                   " \\""")
+            for i, (f, t, path, select) in enumerate(ss):
+                m.write(f"""
 	  -map "[a_{i}]" \\
 	  -map "[v_{i}]" \\
 	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
           {path}""")
                 if i < len(ss) - 1:
-                    f.write(" \\")
+                    m.write(" \\")
                 else:
-                    f.write("\n\n")
+                    m.write("\n\n")
 
 if __name__ == "__main__":
     main()
