@@ -155,7 +155,7 @@ if [ -f ${edit_file} -a ! -f audio_normalised.flac ]; then
     podcast_audio_process ${edit_file} audio_normalised.flac
 fi
 
-if [ -f ${edit_file} -a -f audio_normalised.flac -a ! -f final.nut ]; then
+if [ -f ${edit_file} -a -f audio_normalised.flac -a ! -f final.mkv ]; then
     echo "===> Combine video and normalised audio"
     # Combine edit.nut and audio_normalised.flac into the final video.
     ffmpeg \
