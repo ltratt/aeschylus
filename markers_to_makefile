@@ -153,18 +153,29 @@ def scene_selects(start_time, scenes, scene):
         out.append((f, t, f"scene_{i}.nut", f"between(t\\,{f / 1000.0}\\,{t / 1000.0})"))
     return out
 
+def framerate_round(framerate, x):
+    return round((1000.0 / framerate) * round(float(x)/(1000.0 / framerate)))
+
+def scenes_with_delay(scenes, framerate, delay):
+    return [(s[0], framerate_round(framerate, s[1] - delay), framerate_round(framerate, s[2] - delay)) for s in scenes]
+
 def chunk(l, n):
     return (l[i:i + n] for i in range(0, len(l), n))
 
 def main():
-    if len(sys.argv) != 2:
-        sys.stderr.write("Usage: markers_to_makefile <auto|camera_latency_in_ms>\n")
+    if len(sys.argv) != 3:
+        sys.stderr.write("Usage: markers_to_makefile <framerate> <auto|camera_latency_in_ms>\n")
         sys.exit(1)
     times = first_frame_times()
-    if sys.argv[1] == "auto":
+    framerate = int(sys.argv[1])
+    if sys.argv[2] == "auto":
         start_time = times[0]
+        audio_off = times[1] - times[0]
+        delay = 0
     else:
-        start_time = times[1] + int(sys.argv[1])
+        start_time = times[2]
+        audio_off = int(sys.argv[2]) / 1000.0
+        delay = times[2] - times[0]
 
     if not os.path.exists("markers"):
         print("gte(t\\, 0)")
@@ -183,10 +194,9 @@ def main():
     remove_undos(markers)
     (seg_start, time_deleted, current_scene) = remove_first_rewinds(start_time, markers)
     scenes = process_scenes(start_time, markers, seg_start, time_deleted, current_scene)
+    scenes = scenes_with_delay(scenes, framerate, delay)
 
     with open("Makefile", "w") as m:
-        audio_off = f"{(start_time - times[1]) / 1000.0}"
-
         m.write(open("Makefile.header", "r").read())
 
         scene_paths = ["scene_%d.nut" % i for i in range(len(scenes))]
