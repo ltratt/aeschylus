@@ -50,8 +50,7 @@ ffmpeg \
                       c3=${compressor_lower_threshold}db|c4=2|c5=8db[a]
                       " \
   -map "[a]" \
-  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 12 \
-  -copyts \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 3 \
   ${td}/audio_gated_compressed.flac
 
 echo "===> Normalise audio"
@@ -59,6 +58,6 @@ echo "===> Normalise audio"
 # between -16 and -20 LUFS.
 ffmpeg-normalize ${td}/audio_gated_compressed.flac -o $2 -c:a flac  \
     -t -18 -lrt 10 -tp -1 --dual-mono \
-    -ar ${AUDIO_RATE} -e "-compression_level 9 -sample_fmt ${AUDIO_FMT} -copyts" -pr
+    -ar ${AUDIO_RATE} -e "-compression_level 12 -sample_fmt ${AUDIO_FMT}" -pr
 
 rm -rf ${td}
