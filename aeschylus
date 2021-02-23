@@ -89,7 +89,7 @@ if [ ! -f camera0.nut ]; then
     recorded=1
 fi
 
-if [ ! -f pre_edit.mkv ]; then
+if [ ! -f pre_edit.nut ]; then
     if [ $recorded -eq 1 ]; then
         echo -n "Combine into a single file? Warning: slow! [Y/n] "
         read combine
@@ -109,7 +109,7 @@ if [ ! -f pre_edit.mkv ]; then
         framerate=$X11_SCREEN0_FRAMERATE
     fi
 
-    echo -n "Create pre_edit.mkv only? [Y/n] "
+    echo -n "Create pre_edit.nut only? [Y/n] "
     read mix_file
     # Keyframe settings from:
     #   https://superuser.com/questions/908280/what-is-the-correct-way-to-fix-keyframes-in-ffmpeg-for-dash/1223359#1223359
@@ -133,44 +133,44 @@ GOP2=${gop2}
 EOF
         markers_to_makefile ${framerate} ${CAMERA_LATENCY}
         make -j `python3 -c "import os; print(int(os.cpu_count() * (3/4)))"`
-        echo "===> Pre_edit file: $2/pre_edit_mixed.mkv"
+        echo "===> Pre_edit file: $2/pre_edit.nut"
     fi
     echo -n "Run external editor? [N/y]: "
     read run_shotcut
     if [ "X${run_shotcut}" = "Xy" ]; then
-        echo "===> Edit and write to: $2/edit.mkv so that final video processing can occur"
+        echo "===> Edit and write to: $2/edit.nut so that final video processing can occur"
         exit 0
     fi
 fi
 
-echo -n "Produce final edit from pre_edit.mkv? [Y/n] "
+echo -n "Produce final edit from pre_edit.nut? [Y/n] "
 read edit_from_preedit
 if [ "X${edit_from_preedit}" = "Xn" ]; then
-    edit_file="edit.mkv"
+    edit_file="edit.nut"
 else
-    edit_file="pre_edit.mkv"
+    edit_file="pre_edit.nut"
 fi
 
 if [ -f ${edit_file} -a ! -f audio_normalised.flac ]; then
     podcast_audio_process ${edit_file} audio_normalised.flac
 fi
 
-if [ -f ${edit_file} -a -f audio_normalised.flac -a ! -f final.mkv ]; then
+if [ -f ${edit_file} -a -f audio_normalised.flac -a ! -f final.nut ]; then
     echo "===> Combine video and normalised audio"
     # Combine edit.nut and audio_normalised.flac into the final video.
     ffmpeg \
+        -fflags +genpts \
         -i ${edit_file} \
         -i audio_normalised.flac \
-        -map "0:v:0" -map "1:a:0" \
-        -c copy \
-        -copyts \
-        final.mkv
+        -map "0:v" -map "1:a" \
+        -c copy -async 1000 \
+        final.nut
 fi
 
 if [ -f ${edit_file} -a ! -f final.mp4 ]; then
     echo -n "Produce final.mp4 from final.nut? [Ny] "
     read produce_mp4
     if [ "X${produce_mp4}" = "XY" -o "X${produce_mp4}" = "Xy" ]; then
-        ffmpeg -i final.mkv -c:v copy -c:a aac -b:a 320k -copyts final.mp4
+        ffmpeg -i final.nut -c:v copy -c:a aac -b:a 320k -copyts final.mp4
     fi
 fi

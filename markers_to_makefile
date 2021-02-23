@@ -200,7 +200,7 @@ def main():
         m.write(open("Makefile.header", "r").read())
 
         scene_paths = ["scene_%d.nut" % i for i in range(len(scenes))]
-        m.write(f"""\npre_edit.mkv: {" ".join(scene_paths)}""")
+        m.write(f"""\npre_edit.nut: {" ".join(scene_paths)}""")
 
         audio_concat = []
         for i, (_, f, t) in enumerate(scenes):
@@ -218,10 +218,10 @@ def main():
         {concat}concat=n={len(scenes)}:v=1:a=1[v][a]" \\
 	  -map "[a]" \\
 	  -map "[v]" \\
-	  -c:v libx264 -crf 0 -preset veryslow -async 1 \\
+	  -c:v libx264 -crf 0 -preset veryslow \\
 	  -force_key_frames "expr:eq(mod(n,${{GOP}}),0)" -x264opts "rc-lookahead=${{GOP}}:keyint=${{GOP2}}:min-keyint=${{GOP}}" \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
-	  pre_edit.mkv
+	  pre_edit.nut
 
 camera0_test:
 	ffmpeg \\
