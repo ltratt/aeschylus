@@ -260,8 +260,7 @@ camera0_test:
                 m.write(f"""
                        [a_{i}] \\
                            aselect='{select}', \\
-	                       asetpts=N/SR/TB, \\
-	                       pan=mono|c0=c0+c1 \\
+	                       asetpts=N/SR/TB \\
 	                   [a_{i}]; \\
                        [camera0_{i}] \\
 	                       select='{select}', \\
@@ -312,8 +311,7 @@ camera0_test:
                 m.write(f"""
          [a_{i}] \\
              aselect='{select}', \\
-             asetpts=N/SR/TB, \\
-             pan=mono|c0=c0+c1 \\
+             asetpts=N/SR/TB \\
          [a_{i}]; \\
          [v_{i}] \\
              select='{select}', \\
@@ -355,8 +353,7 @@ camera0_test:
                 m.write(f"""
          [a_{i}] \\
            aselect='{select}', \\
-           asetpts=N/SR/TB, \\
-           pan=mono|c0=c0+c1 \\
+           asetpts=N/SR/TB \\
          [a_{i}]; \\
          [v_{i}] \\
            select='{select}', \\
@@ -424,8 +421,7 @@ camera0_test:
                 m.write(f"""
                        [a_{i}] \\
                            aselect='{select}', \\
-	                       asetpts=N/SR/TB, \\
-	                       pan=mono|c0=c0+c1 \\
+	                       asetpts=N/SR/TB \\
 	                   [a_{i}]; \\
                        [screen0_{i}] \\
 	                       select='{select}', \\
