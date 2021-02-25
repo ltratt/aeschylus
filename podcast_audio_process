@@ -4,6 +4,8 @@ set -e
 
 AUDIO_FMT="s16"
 AUDIO_RATE="44100"
+# How quiet must a channel be to be considered as not having a useful signal?
+MUTE_THRESHOLD="-40"
 
 if [ $# -ne 2 ]; then
     echo "podcast_audio_process <input.flac> <output.flac>" > /dev/stderr
@@ -26,6 +28,27 @@ done
 
 td=`mktemp -d`
 
+echo -n "===> Detect stereo/mono"
+left_peak=`ffmpeg -i unedited.flac -af "channelsplit=channels=FL,astats=metadata=1" -f null - 2>&1 | grep "Peak level dB" | tail -n 1 | cut -d ":" -f 2`
+right_peak=`ffmpeg -i unedited.flac -af "channelsplit=channels=FR,astats=metadata=1" -f null - 2>&1 | grep "Peak level dB" | tail -n 1 | cut -d ":" -f 2`
+if [ `echo "$left_peak < ${MUTE_THRESHOLD} && $right_peak < ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
+    pan="anull"
+    dualmono=""
+    echo ": stereo"
+elif [ `echo "$left_peak > ${MUTE_THRESHOLD} && $right_peak > ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
+    pan="anull"
+    dualmono=""
+    echo ": stereo"
+elif [ `echo "$left_peak < ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
+    pan="pan=mono|c0=FR"
+    dualmono="--dual-mono"
+    echo ": mono (keeping right channel; ignoring left channel)"
+else
+    pan="pan=mono|c0=FL"
+    dualmono="--dual-mono"
+    echo ": mono (keeping left channel; ignoring right channel)"
+fi
+
 echo "===> Apply noisegate and compressor to audio"
 # Apply a noisegate and then a compressor to the mono audio. For guidance on
 # compression see e.g.:
@@ -39,8 +62,9 @@ noisegate_threshold=`python3 -c "print(${signal_level} - 20)"`
 compressor_lower_threshold=`python3 -c "print(${signal_level} - 9)"`
 compressor_upper_threshold=`python3 -c "print(${signal_level} + 3)"`
 ffmpeg \
+  -hide_banner \
   -i $1 \
-  -filter_complex "[0:a]pan=mono|c0=c0+c1[a]; \
+  -filter_complex "[0:a]${pan}[a]; \
                    [a]highpass=frequency=80[a]; \
                    [a]agate=mode=downward:range=-15dB:threshold=${noisegate_threshold}dB: \
                       ratio=3:attack=1.5:release=120:knee=10dB[a]; \
@@ -50,14 +74,14 @@ ffmpeg \
                       c3=${compressor_lower_threshold}db|c4=2|c5=8db[a]
                       " \
   -map "[a]" \
-  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 3 \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/audio_gated_compressed.flac
 
 echo "===> Normalise audio"
 # Normalise the audio and produce a final mkv file. Podcasts typically vary
 # between -16 and -20 LUFS.
 ffmpeg-normalize ${td}/audio_gated_compressed.flac -o $2 -c:a flac  \
-    -t -18 -lrt 10 -tp -1 --dual-mono \
+    -t -18 -lrt 10 -tp -1 ${dualmono} \
     -ar ${AUDIO_RATE} -e "-compression_level 12 -sample_fmt ${AUDIO_FMT}" -pr
 
 rm -rf ${td}
