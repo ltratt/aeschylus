@@ -171,10 +171,12 @@ def main():
     if sys.argv[2] == "auto":
         start_time = times[0]
         audio_off = times[1] - times[0]
+        screen_off = (int(sys.argv[2]) + (times[2] - times[1])) / 1000.0
         delay = 0
     else:
         start_time = times[2]
         audio_off = int(sys.argv[2]) / 1000.0
+        screen_off = (int(sys.argv[2]) + (times[2] - times[1])) / 1000.0
         delay = times[2] - times[0]
 
     if not os.path.exists("markers"):
@@ -305,6 +307,7 @@ camera0_test:
              asplit={str(len(ss))} \\
          {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
          [1:v] \\
+             setpts=PTS+{screen_off}/TB, \\
              fps=fps=${{FRAMERATE}}, \\
              split={str(len(ss))} \\
          {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
@@ -418,6 +421,7 @@ camera0_test:
                            asplit={str(len(ss))} \\
                        {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
                        [1:v] \\
+                           setpts=PTS+{screen_off}/TB, \\
                            fps=fps=${{FRAMERATE}}, \\
                            split={str(len(ss))} \\
                        {"".join([f"[screen0_{x}]" for x in range(len(ss))])}; \\""")
