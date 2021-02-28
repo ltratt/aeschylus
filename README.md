@@ -227,7 +227,7 @@ Indeed, ffmpeg uses more than one clock source internally, depending on your
 input device(s) and other options. Typically ffmpeg uses the "normal" system
 clock or a "monotonic" clock (but e.g. on Linux it mostly uses
 `CLOCK_MONOTONIC`, which isn't properly monotonic; although you can force the
-`v4l2` backend, although virtually nothing else in ffmpeg to use
+`v4l2` backend, although virtually nothing else in ffmpeg, to use
 `CLOCK_MONOTONIC_RAW`). As this suggests, the situation is something of a mess.
 Although I couldn't find any real documentation for this feature, the option I
 settled on is to force all recorded streams to synchronise to the clock used to
