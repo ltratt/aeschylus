@@ -218,6 +218,7 @@ def main():
         {concat}concat=n={len(scenes)}:v=1:a=1[v][a]" \\
 	  -map "[a]" \\
 	  -map "[v]" \\
+      -fflags +shortest -max_interleave_delta 0 -async 1 \\
 	  -c:v libx264 -crf 0 -preset veryslow \\
 	  -force_key_frames "expr:eq(mod(n,${{GOP}}),0)" -x264opts "rc-lookahead=${{GOP}}:keyint=${{GOP2}}:min-keyint=${{GOP}}" \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
@@ -282,6 +283,7 @@ camera0_test:
                 m.write(f"""
 	  -map "[a_{i}]" \\
 	  -map "[v_{i}]" \\
+      -fflags +shortest -max_interleave_delta 0 -async 1 \\
 	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
           {path}""")
@@ -326,6 +328,7 @@ camera0_test:
                 m.write(f"""
       -map "[a_{i}]" \\
       -map "[v_{i}]" \\
+      -fflags +shortest -max_interleave_delta 0 -async 1\\
       -c:v libx264 -crf 0 -preset superfast \\
         {os.path.splitext(path)[0]}_screen0.nut""")
                 if i < len(ss) - 1:
@@ -371,6 +374,7 @@ camera0_test:
                 m.write(f"""
       -map "[a_{i}]" \\
       -map "[v_{i}]" \\
+      -fflags +shortest -max_interleave_delta 0 -async 1 \\
       -c:v libx264 -crf 0 -preset superfast \\
         {os.path.splitext(path)[0]}_camera0.nut""")
                 if i < len(ss) - 1:
@@ -397,6 +401,7 @@ camera0_test:
           [v]" \\
       -map "[a]" \\
 	  -map "[v]" \\
+      -fflags +shortest -max_interleave_delta 0 -async 1 \\
 	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
         {path}
@@ -435,6 +440,7 @@ camera0_test:
                 m.write(f"""
 	  -map "[a_{i}]" \\
 	  -map "[v_{i}]" \\
+      -fflags +shortest -max_interleave_delta 0 -async 1 \\
 	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
           {path}""")
