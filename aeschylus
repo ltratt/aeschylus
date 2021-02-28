@@ -143,16 +143,34 @@ EOF
     fi
 fi
 
-echo -n "Produce final edit from pre_edit.nut? [Y/n] "
-read edit_from_preedit
-if [ "X${edit_from_preedit}" = "Xn" ]; then
+if [ -f edit.nut ]; then
     edit_file="edit.nut"
 else
-    edit_file="pre_edit.nut"
+    echo -n "Produce final edit from pre_edit.nut? [Y/n] "
+    read edit_from_preedit
+    if [ "X${edit_from_preedit}" = "Xn" ]; then
+        edit_file="edit.nut"
+    else
+        edit_file="pre_edit.nut"
+    fi
 fi
 
 if [ -f ${edit_file} -a ! -f audio_normalised.flac ]; then
-    podcast_audio_process ${edit_file} audio_normalised.flac
+    if [ -f audio_edit.flac ]; then
+        podcast_audio_process audio_edit.flac audio_normalised.flac
+    else
+        echo -n "Edit audio before normalisation? [y/N] "
+        read edit_audio
+        if [ "X${edit_audio}" = "Xy" ]; then
+            ffmpeg -hide_banner \
+              -i ${edit_file} \
+              -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+              audio_pre_edit.flac
+            echo "===> Edit $2/audio_pre_edit.flac and write to: $2/audio_edit.flac"
+            exit 0
+        fi
+        podcast_audio_process ${edit_file} audio_normalised.flac
+    fi
 fi
 
 if [ -f ${edit_file} -a -f audio_normalised.flac -a ! -f final.nut ]; then
