@@ -7,7 +7,9 @@ and try again. When you are finished, Aeschylus then automatically edits the
 video, removing all the rewound scenes, and producing a ready-to-upload file as
 output. I first saw a version of this idea in [this video from Vivek
 Haldar](https://t.co/xus7b4osCM): relative to Vivek's implementation, Aeschylus
-uses the time of events to edit the video.
+uses the time of events to edit the video. Example videos using Aeschylus
+are [Don't Panic! Better, Fewer, Syntax Errors for LR Parsers](https://www.youtube.com/watch?v=PGRnk-bzTdU)
+and [Virtual Machine Warmup Blows Hot and Cold](https://www.youtube.com/watch?v=vLl4GteL9Mw).
 
 Aeschylus is extremely rough and ready, held together by strings, low-level,
 and won't work on your system without at least some customisation. However, it
