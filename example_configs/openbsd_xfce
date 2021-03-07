@@ -21,7 +21,7 @@ MINI_CAMERA_SCALE="570:-1"
 # If your camera footage is behind the audio, this variable should be positive;
 # if the camera footage is ahead of the audio it should be negative. Time in
 # milliseconds. For autodetect, use the string "auto".
-CAMERA_LATENCY="175"
+CAMERA_LATENCY="375"
 CAMERA_DEVICE="/dev/video0"
 # If you're capturing the camera at a different framerate to X11, make sure the
 # two are integer multiples to avoid weird frame duplication in the final
