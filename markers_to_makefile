@@ -227,7 +227,7 @@ def main():
 	  pre_edit.nut
 
 camera0_test:
-	ffmpeg \\
+	ffmpeg -hide_banner \\
 	  -i camera0.nut \\
 	  -filter_complex \\
 	    "[0:a]asetpts=N/SR/TB,pan=mono|c0=c0+c1[a]; \\
@@ -248,7 +248,7 @@ camera0_test:
 
         for ss in chunk(scene_selects(start_time, scenes, "camera0_scene"), MAKEFILE_CAMERA_CHUNKS):
             m.write(f"""{" ".join([x[2] for x in ss])}: camera0.nut
-	ffmpeg \\
+	ffmpeg -hide_banner \\
 	  -i camera0.nut \\
 	  -filter_complex "[0:a] \\
                            asetpts=PTS+{audio_off}/TB, \\
@@ -298,7 +298,7 @@ camera0_test:
         for ss in chunk(scene_selects(start_time, scenes, "mixed_scene"), MAKEFILE_SCREEN_CHUNKS):
             m.write(f"""
 {" ".join([f"{os.path.splitext(x[2])[0]}_screen0.nut" for x in ss])}: screen0.nut
-	ffmpeg \\
+	ffmpeg -hide_banner \\
       -i camera0.nut \\
       -i screen0.nut \\
       -filter_complex " \\
@@ -343,7 +343,7 @@ camera0_test:
         for ss in chunk(scene_selects(start_time, scenes, "mixed_scene"), MAKEFILE_CAMERA_CHUNKS):
             m.write(f"""
 {" ".join([f"{os.path.splitext(x[2])[0]}_camera0.nut" for x in ss])}: camera0.nut
-	ffmpeg \\
+	ffmpeg -hide_banner \\
 	  -i camera0.nut \\
       -filter_complex " \\
          [0:a] \\
@@ -388,7 +388,7 @@ camera0_test:
         for f, t, path, select in scene_selects(start_time, scenes, "mixed_scene"):
             m.write(f"""
 {path}: {os.path.splitext(path)[0]}_camera0.nut {os.path.splitext(path)[0]}_screen0.nut
-	ffmpeg \\
+	ffmpeg -hide_banner \\
         -i {os.path.splitext(path)[0]}_camera0.nut \\
         -i {os.path.splitext(path)[0]}_screen0.nut \\
         -filter_complex " \\
@@ -413,7 +413,7 @@ camera0_test:
         for ss in chunk(scene_selects(start_time, scenes, "screen0_scene"), MAKEFILE_SCREEN_CHUNKS):
             m.write(f"""
 {" ".join([x[2] for x in ss])}: camera0.nut screen0.nut
-	ffmpeg \\
+	ffmpeg -hide_banner \\
 	  -i camera0.nut \\
 	  -i screen0.nut \\
 	  -filter_complex "[0:a] \\
