@@ -34,18 +34,26 @@ right_peak=`ffmpeg -i $1 -af "channelsplit=channels=FR,astats=metadata=1" -f nul
 if [ `echo "$left_peak < ${MUTE_THRESHOLD} && $right_peak < ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
     pan="anull"
     dualmono=""
+    compressor_so="sc4_1882"
+    compressor_name="sc4"
     echo ": stereo"
 elif [ `echo "$left_peak > ${MUTE_THRESHOLD} && $right_peak > ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
     pan="anull"
     dualmono=""
+    compressor_so="sc4_1882"
+    compressor_name="sc4"
     echo ": stereo"
 elif [ `echo "$left_peak < ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
     pan="pan=mono|c0=FR"
     dualmono="--dual-mono"
+    compressor_so="sc4m_1916"
+    compressor_name="sc4m"
     echo ": mono (keeping right channel; ignoring left channel)"
 else
     pan="pan=mono|c0=FL"
     dualmono="--dual-mono"
+    compressor_so="sc4m_1916"
+    compressor_name="sc4m"
     echo ": mono (keeping left channel; ignoring right channel)"
 fi
 
@@ -68,9 +76,9 @@ ffmpeg \
                    [a]highpass=frequency=80[a]; \
                    [a]agate=mode=downward:range=-15dB:threshold=${noisegate_threshold}dB: \
                       ratio=3:attack=1.5:release=120:knee=10dB[a]; \
-                   [a]ladspa=file=sc4m_1916:p=sc4m:c=c0=0|c1=1.5ms|c2=4ms| \
+                   [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=1.5ms|c2=4ms| \
                       c3=${compressor_upper_threshold}db|c4=6|c5=3db[a];
-                   [a]ladspa=file=sc4m_1916:p=sc4m:c=c0=0|c1=2ms|c2=12ms| \
+                   [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=2ms|c2=12ms| \
                       c3=${compressor_lower_threshold}db|c4=2|c5=8db[a]
                       " \
   -map "[a]" \
