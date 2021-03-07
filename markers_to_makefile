@@ -210,17 +210,18 @@ def main():
             end = (t - f) / 1000
             beg = f"volume=enable='between(t, 0, {AUDIO_FADE_TIME})':volume='{AUDIO_FADE_PROPORTION} + {1-AUDIO_FADE_PROPORTION} * t * {1.0/AUDIO_FADE_PROPORTION}':eval=frame"
             end = f"volume=enable='between(t, {start}, {end})':volume='1 - {1-AUDIO_FADE_PROPORTION} * (t - {start}) * {1.0/AUDIO_FADE_PROPORTION}':eval=frame"
-            audio_concat.append(f"[{i}:a:0]{beg}, \\\n          {end}[a_{i}];")
-        audio_concat = " \\\n        ".join(audio_concat)
+            audio_concat.append(f"[{i}:a:0]{beg}, \\\n\t      {end}[a_{i}];")
+        audio_concat = " \\\n\t    ".join(audio_concat)
         concat = "".join([f"[{i}:v:0][a_{i}]" for i in range(len(scenes))])
         m.write(f"""
-	ffmpeg -i {" -i ".join(scene_paths)} \\
+	ffmpeg -hide_banner \\
+	  -i {" -i ".join(scene_paths)} \\
 	  -filter_complex " \\
-        {audio_concat} \\
-        {concat}concat=n={len(scenes)}:v=1:a=1[v][a]" \\
+	    {audio_concat} \\
+	    {concat}concat=n={len(scenes)}:v=1:a=1[v][a]" \\
 	  -map "[a]" \\
 	  -map "[v]" \\
-      -fflags +shortest -max_interleave_delta 0 -async 1 \\
+	  -fflags +shortest -max_interleave_delta 0 -async 1 \\
 	  -c:v libx264 -crf 0 -preset veryslow \\
 	  -force_key_frames "expr:eq(mod(n,${{GOP}}),0)" -x264opts "rc-lookahead=${{GOP}}:keyint=${{GOP2}}:min-keyint=${{GOP}}" \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 9 \\
@@ -229,20 +230,20 @@ def main():
 camera0_test:
 	ffmpeg -hide_banner \\
 	  -i camera0.nut \\
-	  -filter_complex \\
-	    "[0:a]asetpts=N/SR/TB,pan=mono|c0=c0+c1[a]; \\
-	     [0:v]fps=fps=${{FRAMERATE}}, \\
-	          crop=${{MINI_CAMERA_CROP}}, \\
-	          vaguedenoiser, \\
-	          ${{CHROMAKEY}} \\
-	     [camera0]; \\
-	          color=c='${{BACKGROUND_COLOUR}}':r=${{FRAMERATE}}:s=${{CAMERA_RESOLUTION}} \\
-	     [screen0]; \\
-	     [screen0][camera0] \\
-	          overlay=shortest=1:${{CAMERA_OVERLAY}} \\
-	     [v]" \\
+	  -filter_complex " \\
+	    [0:a]asetpts=N/SR/TB,pan=mono|c0=c0+c1[a]; \\
+	    [0:v]fps=fps=${{FRAMERATE}}, \\
+	      crop=${{MINI_CAMERA_CROP}}, \\
+	      vaguedenoiser, \\
+	      ${{CHROMAKEY}} \\
+	    [camera0]; \\
+	      color=c='${{BACKGROUND_COLOUR}}':r=${{FRAMERATE}}:s=${{CAMERA_RESOLUTION}} \\
+	    [screen0]; \\
+	    [screen0][camera0] \\
+	      overlay=shortest=1:${{CAMERA_OVERLAY}} \\
+	    [v]" \\
 	  -map "[a]" -map "[v]" \\
-      -f nut -c:v libx264 -crf 0 -preset ultrafast -c:a flac - | ffplay -fs -
+	  -f nut -c:v libx264 -crf 0 -preset ultrafast -c:a flac - | ffplay -fs -
 
 """)
 
@@ -250,45 +251,46 @@ camera0_test:
             m.write(f"""{" ".join([x[2] for x in ss])}: camera0.nut
 	ffmpeg -hide_banner \\
 	  -i camera0.nut \\
-	  -filter_complex "[0:a] \\
-                           asetpts=PTS+{audio_off}/TB, \\
-                           asplit={str(len(ss))} \\
-                       {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
-                       [0:v] \\
-                           fps=fps=${{FRAMERATE}}, \\
-                           split={str(len(ss))} \\
-                       {"".join([f"[camera0_{x}]" for x in range(len(ss))])}; \\""")
+	  -filter_complex " \\
+	    [0:a] \\
+	      asetpts=PTS+{audio_off}/TB, \\
+	      asplit={str(len(ss))} \\
+	    {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
+	    [0:v] \\
+	      fps=fps=${{FRAMERATE}}, \\
+	      split={str(len(ss))} \\
+	      {"".join([f"[camera0_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
-                       [a_{i}] \\
-                           aselect='{select}', \\
-	                       asetpts=N/SR/TB \\
-	                   [a_{i}]; \\
-                       [camera0_{i}] \\
-	                       select='{select}', \\
-	                       setpts=N/FRAME_RATE/TB, \\
-	                       crop=${{MINI_CAMERA_CROP}}, \\
-	                       vaguedenoiser, \\
-	                       ${{CHROMAKEY}} \\
-	                   [camera0_{i}]; \\
-                           color=c='${{BACKGROUND_COLOUR}}':r=${{FRAMERATE}}:s=${{CAMERA_RESOLUTION}} \\
-	                   [screen0_{i}]; \\
-	                   [screen0_{i}][camera0_{i}] \\
-	                        overlay=shortest=1:${{CAMERA_OVERLAY}} \\
-	                   [v_{i}]""")
+	    [a_{i}] \\
+	      aselect='{select}', \\
+	      asetpts=N/SR/TB \\
+	    [a_{i}]; \\
+	    [camera0_{i}] \\
+	      select='{select}', \\
+	      setpts=N/FRAME_RATE/TB, \\
+	      crop=${{MINI_CAMERA_CROP}}, \\
+	      vaguedenoiser, \\
+	      ${{CHROMAKEY}} \\
+	    [camera0_{i}]; \\
+	      color=c='${{BACKGROUND_COLOUR}}':r=${{FRAMERATE}}:s=${{CAMERA_RESOLUTION}} \\
+	    [screen0_{i}]; \\
+	    [screen0_{i}][camera0_{i}] \\
+	      overlay=shortest=1:${{CAMERA_OVERLAY}} \\
+	    [v_{i}]""")
                 if i < len(ss) - 1:
                     m.write("; \\")
 
-            m.write(""" \\\n                   " \\""")
+            m.write("\" \\")
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
 	  -map "[a_{i}]" \\
 	  -map "[v_{i}]" \\
-      -fflags +shortest -max_interleave_delta 0 -async 1 \\
+	  -fflags +shortest -max_interleave_delta 0 -async 1 \\
 	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
-          {path}""")
+	    {path}""")
                 if i < len(ss) - 1:
                     m.write(" \\")
                 else:
@@ -299,29 +301,29 @@ camera0_test:
             m.write(f"""
 {" ".join([f"{os.path.splitext(x[2])[0]}_screen0.nut" for x in ss])}: screen0.nut
 	ffmpeg -hide_banner \\
-      -i camera0.nut \\
-      -i screen0.nut \\
-      -filter_complex " \\
-         [0:a] \\
-             asetpts=PTS+{audio_off}/TB, \\
-             asplit={str(len(ss))} \\
-         {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
-         [1:v] \\
-             setpts=PTS+{screen_off}/TB, \\
-             fps=fps=${{FRAMERATE}}, \\
-             split={str(len(ss))} \\
-         {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
+	  -i camera0.nut \\
+	  -i screen0.nut \\
+	  -filter_complex " \\
+	    [0:a] \\
+	      asetpts=PTS+{audio_off}/TB, \\
+	      asplit={str(len(ss))} \\
+	    {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
+	    [1:v] \\
+	      setpts=PTS+{screen_off}/TB, \\
+	      fps=fps=${{FRAMERATE}}, \\
+	      split={str(len(ss))} \\
+	     {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
-         [a_{i}] \\
-             aselect='{select}', \\
-             asetpts=N/SR/TB \\
-         [a_{i}]; \\
-         [v_{i}] \\
-             select='{select}', \\
-             setpts=N/FRAME_RATE/TB \\
-         [v_{i}]""")
+	    [a_{i}] \\
+	      aselect='{select}', \\
+	      asetpts=N/SR/TB \\
+	    [a_{i}]; \\
+	    [v_{i}] \\
+	      select='{select}', \\
+	      setpts=N/FRAME_RATE/TB \\
+	    [v_{i}]""")
                 if i < len(ss) - 1:
                     m.write("; \\")
                 else:
@@ -329,11 +331,11 @@ camera0_test:
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
-      -map "[a_{i}]" \\
-      -map "[v_{i}]" \\
-      -fflags +shortest -max_interleave_delta 0 -async 1\\
-      -c:v libx264 -crf 0 -preset superfast \\
-        {os.path.splitext(path)[0]}_screen0.nut""")
+	  -map "[a_{i}]" \\
+	  -map "[v_{i}]" \\
+	  -fflags +shortest -max_interleave_delta 0 -async 1 \\
+	  -c:v libx264 -crf 0 -preset superfast \\
+	    {os.path.splitext(path)[0]}_screen0.nut""")
                 if i < len(ss) - 1:
                     m.write(" \\")
                 else:
@@ -345,29 +347,29 @@ camera0_test:
 {" ".join([f"{os.path.splitext(x[2])[0]}_camera0.nut" for x in ss])}: camera0.nut
 	ffmpeg -hide_banner \\
 	  -i camera0.nut \\
-      -filter_complex " \\
-         [0:a] \\
-             asetpts=PTS+{audio_off}/TB, \\
-             asplit={str(len(ss))} \\
-         {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
-         [0:v] \\
-             fps=fps=${{FRAMERATE}}, \\
-             split={str(len(ss))} \\
-         {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
+	  -filter_complex " \\
+	    [0:a] \\
+	      asetpts=PTS+{audio_off}/TB, \\
+	      asplit={str(len(ss))} \\
+	    {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
+	    [0:v] \\
+	      fps=fps=${{FRAMERATE}}, \\
+	      split={str(len(ss))} \\
+	    {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
-         [a_{i}] \\
-           aselect='{select}', \\
-           asetpts=N/SR/TB \\
-         [a_{i}]; \\
-         [v_{i}] \\
-           select='{select}', \\
-           setpts=N/FRAME_RATE/TB, \\
-           crop=${{MINI_CAMERA_CROP}}, \\
-           vaguedenoiser, \\
-           scale=${{MINI_CAMERA_SCALE}} \\
-         [v_{i}]""")
+	    [a_{i}] \\
+	      aselect='{select}', \\
+	      asetpts=N/SR/TB \\
+	    [a_{i}]; \\
+	    [v_{i}] \\
+	      select='{select}', \\
+	      setpts=N/FRAME_RATE/TB, \\
+	      crop=${{MINI_CAMERA_CROP}}, \\
+	      vaguedenoiser, \\
+	      scale=${{MINI_CAMERA_SCALE}} \\
+	    [v_{i}]""")
                 if i < len(ss) - 1:
                     m.write("; \\")
                 else:
@@ -375,11 +377,11 @@ camera0_test:
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
-      -map "[a_{i}]" \\
-      -map "[v_{i}]" \\
-      -fflags +shortest -max_interleave_delta 0 -async 1 \\
-      -c:v libx264 -crf 0 -preset superfast \\
-        {os.path.splitext(path)[0]}_camera0.nut""")
+	  -map "[a_{i}]" \\
+	  -map "[v_{i}]" \\
+	  -fflags +shortest -max_interleave_delta 0 -async 1 \\
+	  -c:v libx264 -crf 0 -preset superfast \\
+	    {os.path.splitext(path)[0]}_camera0.nut""")
                 if i < len(ss) - 1:
                     m.write(" \\")
                 else:
@@ -389,25 +391,25 @@ camera0_test:
             m.write(f"""
 {path}: {os.path.splitext(path)[0]}_camera0.nut {os.path.splitext(path)[0]}_screen0.nut
 	ffmpeg -hide_banner \\
-        -i {os.path.splitext(path)[0]}_camera0.nut \\
-        -i {os.path.splitext(path)[0]}_screen0.nut \\
-        -filter_complex " \\
-          [0:a] \\
-            anull \\
-          [a]; \\
-          [0:v] \\
-            ${{CHROMAKEY}} \\
-          [camera0]; \\
-          [1:v] \\
-          [camera0] \\
-            overlay=shortest=1:${{CAMERA_OVERLAY}} \\
-          [v]" \\
-      -map "[a]" \\
+	  -i {os.path.splitext(path)[0]}_camera0.nut \\
+	  -i {os.path.splitext(path)[0]}_screen0.nut \\
+	  -filter_complex " \\
+	    [0:a] \\
+	      anull \\
+	    [a]; \\
+	    [0:v] \\
+	      ${{CHROMAKEY}} \\
+	    [camera0]; \\
+	    [1:v] \\
+	    [camera0] \\
+	      overlay=shortest=1:${{CAMERA_OVERLAY}} \\
+	    [v]" \\
+	  -map "[a]" \\
 	  -map "[v]" \\
-      -fflags +shortest -max_interleave_delta 0 -async 1 \\
+	  -fflags +shortest -max_interleave_delta 0 -async 1 \\
 	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
-        {path}
+	    {path}
 """)
 
         for ss in chunk(scene_selects(start_time, scenes, "screen0_scene"), MAKEFILE_SCREEN_CHUNKS):
@@ -416,38 +418,38 @@ camera0_test:
 	ffmpeg -hide_banner \\
 	  -i camera0.nut \\
 	  -i screen0.nut \\
-	  -filter_complex "[0:a] \\
-                           asetpts=PTS+{audio_off}/TB, \\
-                           asplit={str(len(ss))} \\
-                       {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
-                       [1:v] \\
-                           setpts=PTS+{screen_off}/TB, \\
-                           fps=fps=${{FRAMERATE}}, \\
-                           split={str(len(ss))} \\
-                       {"".join([f"[screen0_{x}]" for x in range(len(ss))])}; \\""")
+	  -filter_complex " \\
+	    [0:a] \\
+	      asetpts=PTS+{audio_off}/TB, \\
+	      asplit={str(len(ss))} \\
+	      {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
+	    [1:v] \\
+	      setpts=PTS+{screen_off}/TB, \
+	      fps=fps=${{FRAMERATE}}, \\
+	      split={str(len(ss))} \\
+	      {"".join([f"[screen0_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
-                       [a_{i}] \\
-                           aselect='{select}', \\
-	                       asetpts=N/SR/TB \\
-	                   [a_{i}]; \\
-                       [screen0_{i}] \\
-	                       select='{select}', \\
-                           setpts=N/FRAME_RATE/TB \\
-	                   [v_{i}]""")
+	    [a_{i}] \\
+	      aselect='{select}', \\
+	      asetpts=N/SR/TB \\
+	    [a_{i}]; \\
+	    [screen0_{i}] \\
+	      select='{select}', \\
+	      setpts=N/FRAME_RATE/TB \\
+	    [v_{i}]""")
                 if i < len(ss) - 1:
                     m.write("; \\")
 
-            m.write(""" \\\n                   " \\""")
             for i, (f, t, path, select) in enumerate(ss):
-                m.write(f"""
+                m.write(f"""" \\
 	  -map "[a_{i}]" \\
 	  -map "[v_{i}]" \\
-      -fflags +shortest -max_interleave_delta 0 -async 1 \\
+	  -fflags +shortest -max_interleave_delta 0 -async 1 \\
 	  -c:v libx264 -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
-          {path}""")
+	    {path}""")
                 if i < len(ss) - 1:
                     m.write(" \\")
                 else:
