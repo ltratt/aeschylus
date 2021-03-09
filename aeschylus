@@ -109,16 +109,11 @@ if [ ! -f pre_edit.nut ]; then
         framerate=$X11_SCREEN0_FRAMERATE
     fi
 
-    echo -n "Create pre_edit.nut only? [Y/n] "
-    read mix_file
     # Keyframe settings from:
     #   https://superuser.com/questions/908280/what-is-the-correct-way-to-fix-keyframes-in-ffmpeg-for-dash/1223359#1223359
-    if [ "X$mix_file" = "Xn" ]; then
-        exit 1
-    else
-        gop=`python3 -c "print(${GOP} * ${framerate})"`
-        gop2=`python3 -c "print(${GOP} * ${framerate} * 2)"`
-        cat << EOF > Makefile.header
+    gop=`python3 -c "print(${GOP} * ${framerate})"`
+    gop2=`python3 -c "print(${GOP} * ${framerate} * 2)"`
+    cat << EOF > Makefile.header
 AUDIO_FMT=${AUDIO_FMT}
 AUDIO_RATE=${AUDIO_RATE}
 BACKGROUND_COLOUR=${BACKGROUND_COLOUR}
@@ -131,10 +126,10 @@ CAMERA_OVERLAY="${CAMERA_OVERLAY}"
 GOP=${gop}
 GOP2=${gop2}
 EOF
-        markers_to_makefile ${framerate} ${CAMERA_LATENCY}
-        make -j `python3 -c "import os; print(int(os.cpu_count() * (3/4)))"`
-        echo "===> Pre_edit file: $2/pre_edit.nut"
-    fi
+    markers_to_makefile ${framerate} ${CAMERA_LATENCY}
+    make -j `python3 -c "import os; print(int(os.cpu_count() * (3/4)))"`
+    echo "===> Pre_edit file: $2/pre_edit.nut"
+
     echo -n "Run external editor? [N/y]: "
     read run_shotcut
     if [ "X${run_shotcut}" = "Xy" ]; then
