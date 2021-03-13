@@ -159,10 +159,10 @@ screencast. Talk as long as you want, set `safepoint`s, make `rewind`s. When
 you're ready to finish press `fastforward`, wait at least 1 second and then go
 to the terminal running aeschylus and press `q` to stop the ffmpeg recording
 process. Aeschylus will then start editing the video. The
-edited-but-not-audio-processed version will be in `<output dir>/pre_edit.mkv`.
+edited-but-not-audio-processed version will be in `<output dir>/pre_edit.nut`.
 If you choose to use audio processing, that will be processed further into
-`<output dir>/final.mkv` and, if you request it, `<output dir>/final.mp4`. Note
-that the `.mkv` file is lossless, and a better format for uploading to e.g.
+`<output dir>/final.nut` and, if you request it, `<output dir>/final.mp4`. Note
+that the `.nut` file is lossless, and a better format for uploading to e.g.
 YouTube.
 
 
@@ -221,7 +221,7 @@ timestamps instead with `-use_wallclock_as_timestamps` and `-copyts`:
     ffmpeg \
       -use_wallclock_as_timestamps 1 \
       -f v4l2 -i /dev/video0 \
-      -map "0:v" -copyts recording.mkv
+      -map "0:v" -copyts recording.nut
 
 There are obvious potential problems with clock synchronisation in this setup:
 ffmpeg's clock(s) is not necessarily the same as that used as `epochtime`.
@@ -240,7 +240,7 @@ syntax in `-map`:
       -use_wallclock_as_timestamps 1 \
       -f v4l2 -i /dev/video0 \
       -f sndio -i snd/0 \
-      -map "0:v,1:a" -map "1:a" -copyts recording.mkv
+      -map "0:v,1:a" -map "1:a" -copyts recording.nut
 
 In my case I believe this works because the OpenBSD `sndio` backend uses the
 non-monotonic system clock. If, for example, it used the monotonic system
