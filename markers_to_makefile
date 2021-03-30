@@ -171,7 +171,7 @@ def main():
     if sys.argv[2] == "auto":
         start_time = times[0]
         audio_off = times[1] - times[0]
-        screen_off = (int(sys.argv[2]) + (times[2] - times[1])) / 1000.0
+        screen_off = (times[2] - times[1]) / 1000.0
         delay = 0
     else:
         start_time = times[2]
