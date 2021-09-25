@@ -32,12 +32,14 @@ echo -n "===> Detect stereo/mono"
 left_peak=`ffmpeg -i $1 -af "channelsplit=channels=FL,astats=metadata=1" -f null - 2>&1 | grep "Peak level dB" | tail -n 1 | cut -d ":" -f 2`
 right_peak=`ffmpeg -i $1 -af "channelsplit=channels=FR,astats=metadata=1" -f null - 2>&1 | grep "Peak level dB" | tail -n 1 | cut -d ":" -f 2`
 if [ `echo "$left_peak < ${MUTE_THRESHOLD} && $right_peak < ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
+    # We don't seem to have much signal in either channel: we'd best let everything through!
     pan="anull"
     dualmono=""
     compressor_so="sc4_1882"
     compressor_name="sc4"
     echo ": stereo"
 elif [ `echo "$left_peak > ${MUTE_THRESHOLD} && $right_peak > ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
+    # Both channels have a strong signal.
     pan="anull"
     dualmono=""
     compressor_so="sc4_1882"
