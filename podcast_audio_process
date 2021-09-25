@@ -29,34 +29,46 @@ done
 td=`mktemp -d`
 
 echo -n "===> Detect stereo/mono"
-left_peak=`ffmpeg -i $1 -af "channelsplit=channels=FL,astats=metadata=1" -f null - 2>&1 | grep "Peak level dB" | tail -n 1 | cut -d ":" -f 2`
-right_peak=`ffmpeg -i $1 -af "channelsplit=channels=FR,astats=metadata=1" -f null - 2>&1 | grep "Peak level dB" | tail -n 1 | cut -d ":" -f 2`
-if [ `echo "$left_peak < ${MUTE_THRESHOLD} && $right_peak < ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
-    # We don't seem to have much signal in either channel: we'd best let everything through!
+num_channels=`ffprobe -i $1 -show_entries stream=channels -select_streams a:0 -of compact=p=0:nk=1 -v 0`
+if [[ $num_channels == 1 ]]; then
     pan="anull"
-    dualmono=""
-    compressor_so="sc4_1882"
-    compressor_name="sc4"
-    echo ": stereo"
-elif [ `echo "$left_peak > ${MUTE_THRESHOLD} && $right_peak > ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
-    # Both channels have a strong signal.
-    pan="anull"
-    dualmono=""
-    compressor_so="sc4_1882"
-    compressor_name="sc4"
-    echo ": stereo"
-elif [ `echo "$left_peak < ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
-    pan="pan=mono|c0=FR"
     dualmono="--dual-mono"
     compressor_so="sc4m_1916"
     compressor_name="sc4m"
-    echo ": mono (keeping right channel; ignoring left channel)"
+    echo ": mono"
+elif [[ $num_channels == 2 ]]; then
+    left_peak=`ffmpeg -i $1 -af "channelsplit=channels=FL,astats=metadata=1" -f null - 2>&1 | grep "Peak level dB" | tail -n 1 | cut -d ":" -f 2`
+    right_peak=`ffmpeg -i $1 -af "channelsplit=channels=FR,astats=metadata=1" -f null - 2>&1 | grep "Peak level dB" | tail -n 1 | cut -d ":" -f 2`
+    if [ `echo "$left_peak < ${MUTE_THRESHOLD} && $right_peak < ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
+        # We don't seem to have much signal in either channel: we'd best let everything through!
+        pan="anull"
+        dualmono=""
+        compressor_so="sc4_1882"
+        compressor_name="sc4"
+        echo ": stereo"
+    elif [ `echo "$left_peak > ${MUTE_THRESHOLD} && $right_peak > ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
+        # Both channels have a strong signal.
+        pan="anull"
+        dualmono=""
+        compressor_so="sc4_1882"
+        compressor_name="sc4"
+        echo ": stereo"
+    elif [ `echo "$left_peak < ${MUTE_THRESHOLD}" | bc` -eq 1 ]; then
+        pan="pan=mono|c0=FR"
+        dualmono="--dual-mono"
+        compressor_so="sc4m_1916"
+        compressor_name="sc4m"
+        echo ": stereo (keeping right channel; ignoring left channel)"
+    else
+        pan="pan=mono|c0=FL"
+        dualmono="--dual-mono"
+        compressor_so="sc4m_1916"
+        compressor_name="sc4m"
+        echo ": stereo (keeping left channel; ignoring right channel)"
+    fi
 else
-    pan="pan=mono|c0=FL"
-    dualmono="--dual-mono"
-    compressor_so="sc4m_1916"
-    compressor_name="sc4m"
-    echo ": mono (keeping left channel; ignoring right channel)"
+    echo "Can't deal with input file with $num_channels channels" > /dev/stderr
+    exit 1
 fi
 
 echo "===> Apply noisegate and compressor to audio"
