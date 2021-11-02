@@ -259,7 +259,7 @@ camera0_test:
 	    [0:v] \\
 	      fps=fps=${{FRAMERATE}}, \\
 	      split={str(len(ss))} \\
-	      {"".join([f"[camera0_{x}]" for x in range(len(ss))])}; \\""")
+	    {"".join([f"[camera0_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
