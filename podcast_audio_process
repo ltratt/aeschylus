@@ -4,8 +4,9 @@ set -e
 
 AUDIO_FMT="s16"
 AUDIO_RATE="44100"
-# How quiet must a channel be to be considered as not having a useful signal?
-MUTE_THRESHOLD="-40"
+# How quiet must a channel peak at be to be considered as not having a useful
+# signal?
+MUTE_THRESHOLD="-20"
 
 if [ $# -ne 2 ]; then
     echo "podcast_audio_process <input.flac> <output.flac>" > /dev/stderr
