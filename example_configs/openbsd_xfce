@@ -35,7 +35,7 @@ CHROMAKEY="chromakey=286000:0.07:0.02,despill=type=green:mix=0.5:expand=0.3:brig
 # How often to generate a new GOP in seconds
 GOP=3
 XFCE_ORIGINAL_TERMINAL_FONT=`cat ~/.config/xfce4/terminal/terminalrc | grep "^FontName"`
-XFCE_TERMINAL_FONT="Liberation Mono for Powerline 18"
+XFCE_TERMINAL_FONT="JuliaMono Medium 10"
 X11_SCREEN0_DISPLAY=":0.0"
 # If you're capturing X11 at a different framerate to the camera, make sure the
 # two are integer multiples to avoid weird frame duplication in the final
