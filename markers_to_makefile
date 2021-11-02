@@ -334,7 +334,7 @@ camera0_test:
 	  -map "[a_{i}]" \\
 	  -map "[v_{i}]" \\
 	  -fflags +shortest -max_interleave_delta 0 -async 1 \\
-	  -c:v libx264 -crf 0 -preset superfast \\
+	  -c:v libx264 -pix_fmt yuv420p -crf 0 -preset superfast \\
 	    {os.path.splitext(path)[0]}_screen0.nut""")
                 if i < len(ss) - 1:
                     m.write(" \\")
@@ -447,7 +447,7 @@ camera0_test:
 	  -map "[a_{i}]" \\
 	  -map "[v_{i}]" \\
 	  -fflags +shortest -max_interleave_delta 0 -async 1 \\
-	  -c:v libx264 -crf 0 -preset superfast \\
+	  -c:v libx264 -pix_fmt yuv420p -crf 0 -preset superfast \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 \\
 	    {path}""")
                 if i < len(ss) - 1:
