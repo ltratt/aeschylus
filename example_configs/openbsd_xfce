@@ -26,12 +26,12 @@ CAMERA_DEVICE="/dev/video0"
 # If you're capturing the camera at a different framerate to X11, make sure the
 # two are integer multiples to avoid weird frame duplication in the final
 # video.
-CAMERA_FRAMERATE=24
+CAMERA_FRAMERATE=30
 # Where to place the camera overlay.
 CAMERA_OVERLAY="x=W-w+0:y=H-h+1"
 CAMERA_RESOLUTION="1920x1080"
 # If you don't have a greenscreen, set this to "null"
-CHROMAKEY="chromakey=30783a:0.04:0.02,despill=type=green:mix=0.5:expand=0.3:brightness=0:green=-1:blue=0"
+CHROMAKEY="chromakey=286000:0.07:0.02,despill=type=green:mix=0.5:expand=0.3:brightness=0.8:green=-1:blue=0"
 # How often to generate a new GOP in seconds
 GOP=3
 XFCE_ORIGINAL_TERMINAL_FONT=`cat ~/.config/xfce4/terminal/terminalrc | grep "^FontName"`
@@ -40,7 +40,7 @@ X11_SCREEN0_DISPLAY=":0.0"
 # If you're capturing X11 at a different framerate to the camera, make sure the
 # two are integer multiples to avoid weird frame duplication in the final
 # video.
-X11_SCREEN0_FRAMERATE=12
+X11_SCREEN0_FRAMERATE=15
 # By default we capture the entire screen.
 X11_SCREEN0_RESOLUTION="1920x1080"
 
@@ -48,7 +48,6 @@ setup_screencast() {
     for cmd in unclutter xdotool; do
         which $cmd 2>&1 > /dev/null || ( echo "'$cmd' not installed" > /dev/stderr ; exit 1 )
     done
-
 
     # Basic checks that we're a) going to record what we want b) not going to mess up our recording.
     if [ `sysctl -n kern.audio.record` -ne 1 ]; then
@@ -63,14 +62,16 @@ setup_screencast() {
 
     apm -H
 
-    projector ${X11_SCREEN0_RESOLUTION}
+    for d in `xrandr | grep " connected " | awk '{ print $1 }'`; do
+        xrandr --output $d --mode ${X11_SCREEN0_RESOLUTION}
+    done
     sed -i "s/^FontName.*\$/FontName=${XFCE_TERMINAL_FONT}/g" ~/.config/xfce4/terminal/terminalrc
 
     # Set the XFCE background to a solid colour without an image.
     r=`python3 -c "print((($BACKGROUND_COLOUR >> 16) & 255) / float(0xFF))"`
     g=`python3 -c "print((($BACKGROUND_COLOUR >> 8) & 255) / float(0xFF))"`
     b=`python3 -c "print(($BACKGROUND_COLOUR & 255) / float(0xFF))"`
-    for wksp in `xfconf-query -c xfce4-desktop -l | grep -E "screen0.*(HDMI|monitor|eDP)-?[0-9]/workspace0" | cut -d "/" -f 1-5 | sort -u`; do
+    for wksp in `xfconf-query -c xfce4-desktop -l | grep -E "screen0/monitor.*/workspace0" | cut -d "/" -f 1-5 | sort -u`; do
         xfconf-query --create -c xfce4-desktop -p ${wksp}/rgba1 \
             -t double -t double -t double -t double -s $r -s $g -s $b -s 1 || true
         xfconf-query -c xfce4-desktop -p ${wksp}/image-style -s 0 || true
@@ -134,19 +135,16 @@ setup_screencast() {
     done
 
     video -d
-    #video white_balance_temperature=5600 saturation=140 contrast=150 gain=20
 }
 
 # This function can be called more than once, so it must be safe to "restart"
 # applications that are not actually stopped.
 restore_settings() {
-    projector normal
+    for d in `xrandr | grep " connected " | awk '{ print $1 }'`; do
+        xrandr --output $d --auto
+    done
     sed -i "s/^FontName.*\$/${XFCE_ORIGINAL_TERMINAL_FONT}/g" ~/.config/xfce4/terminal/terminalrc
 
-    # Restore desktop background image.
-    for wksp in `xfconf-query -c xfce4-desktop -l | grep -E "screen0.*(HDMI|monitor|eDP)-?[0-9]/workspace0" | cut -d "/" -f 1-5 | sort -u`; do
-        xfconf-query -c xfce4-desktop -p ${wksp}/image-style -s 5
-    done
     pkill unclutter || true
     pkill gromit-mpx || true
     ps -auxww | grep python | grep screenkey | cut -d " " -f 2- |sed -E "s/^ *//" | cut -d " " -f 1 | xargs -r kill || true
