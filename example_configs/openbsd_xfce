@@ -56,7 +56,7 @@ setup_screencast() {
     fi
 
     if [ `pgrep "^vi$" | wc -l ` -gt 0 ]; then
-        echo "Won't start while there active 'vi' processes." > /dev/stderr
+        echo "Won't start while there are active 'vi' processes." > /dev/stderr
         exit 1
     fi
 
