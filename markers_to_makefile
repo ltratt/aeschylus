@@ -6,8 +6,8 @@ from decimal import Decimal
 INPUT_FILES = [("camera0.nut", "v:0"), ("camera0.nut", "a:0"), ("screen0.nut", "v:0")]
 AUDIO_FADE_TIME = 0.25 # In seconds
 AUDIO_FADE_PROPORTION = 0.3 # Between 0 and 1
-MAKEFILE_CAMERA_CHUNKS = 20
-MAKEFILE_SCREEN_CHUNKS = 7
+MAKEFILE_CAMERA_CHUNKS = 1
+MAKEFILE_SCREEN_CHUNKS = 1
 
 def first_frame_times():
     i = 1
@@ -232,9 +232,9 @@ camera0_test:
 	  -i camera0.nut \\
 	  -filter_complex " \\
 	    [0:a]asetpts=N/SR/TB,pan=mono|c0=c0+c1[a]; \\
-	    [0:v]fps=fps=${{FRAMERATE}}, \\
+	    [0:v] \\
+	      fps=fps=${{FRAMERATE}}:start_time=0:round=down, \\
 	      crop=${{MINI_CAMERA_CROP}}, \\
-	      vaguedenoiser, \\
 	      ${{CHROMAKEY}} \\
 	    [camera0]; \\
 	      color=c='${{BACKGROUND_COLOUR}}':r=${{FRAMERATE}}:s=${{CAMERA_RESOLUTION}} \\
@@ -257,21 +257,20 @@ camera0_test:
 	      asplit={str(len(ss))} \\
 	    {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
 	    [0:v] \\
-	      fps=fps=${{FRAMERATE}}, \\
+	      fps=fps=${{FRAMERATE}}:start_time=0:round=down, \\
 	      split={str(len(ss))} \\
 	    {"".join([f"[camera0_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
 	    [a_{i}] \\
-	      aselect='{select}', \\
+	      atrim=start={f/1000.0}:end={t/1000.0}, \\
 	      asetpts=N/SR/TB \\
 	    [a_{i}]; \\
 	    [camera0_{i}] \\
-	      select='{select}', \\
+	      trim=start={f/1000.0}:end={t/1000.0}, \\
 	      setpts=N/FRAME_RATE/TB, \\
 	      crop=${{MINI_CAMERA_CROP}}, \\
-	      vaguedenoiser, \\
 	      ${{CHROMAKEY}} \\
 	    [camera0_{i}]; \\
 	      color=c='${{BACKGROUND_COLOUR}}':r=${{FRAMERATE}}:s=${{CAMERA_RESOLUTION}} \\
@@ -310,18 +309,18 @@ camera0_test:
 	    {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
 	    [1:v] \\
 	      setpts=PTS+{screen_off}/TB, \\
-	      fps=fps=${{FRAMERATE}}, \\
+	      fps=fps=${{FRAMERATE}}:start_time=0:round=down, \\
 	      split={str(len(ss))} \\
 	     {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
 	    [a_{i}] \\
-	      aselect='{select}', \\
+	      atrim=start={f/1000.0}:end={t/1000.0}, \\
 	      asetpts=N/SR/TB \\
 	    [a_{i}]; \\
 	    [v_{i}] \\
-	      select='{select}', \\
+	      trim=start={f/1000.0}:end={t/1000.0}, \\
 	      setpts=N/FRAME_RATE/TB \\
 	    [v_{i}]""")
                 if i < len(ss) - 1:
@@ -353,21 +352,20 @@ camera0_test:
 	      asplit={str(len(ss))} \\
 	    {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
 	    [0:v] \\
-	      fps=fps=${{FRAMERATE}}, \\
+	      fps=fps=${{FRAMERATE}}:start_time=0:round=down, \\
 	      split={str(len(ss))} \\
 	    {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
 	    [a_{i}] \\
-	      aselect='{select}', \\
+	      atrim=start={f/1000.0}:end={t/1000.0}, \\
 	      asetpts=N/SR/TB \\
 	    [a_{i}]; \\
 	    [v_{i}] \\
-	      select='{select}', \\
+	      trim=start={f/1000.0}:end={t/1000.0}, \\
 	      setpts=N/FRAME_RATE/TB, \\
 	      crop=${{MINI_CAMERA_CROP}}, \\
-	      vaguedenoiser, \\
 	      scale=${{MINI_CAMERA_SCALE}} \\
 	    [v_{i}]""")
                 if i < len(ss) - 1:
@@ -425,18 +423,18 @@ camera0_test:
 	      {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
 	    [1:v] \\
 	      setpts=PTS+{screen_off}/TB, \
-	      fps=fps=${{FRAMERATE}}, \\
+	      fps=fps=${{FRAMERATE}}:start_time=0:round=down, \\
 	      split={str(len(ss))} \\
 	      {"".join([f"[screen0_{x}]" for x in range(len(ss))])}; \\""")
 
             for i, (f, t, path, select) in enumerate(ss):
                 m.write(f"""
 	    [a_{i}] \\
-	      aselect='{select}', \\
+	      atrim=start={f/1000.0}:end={t/1000.0}, \\
 	      asetpts=N/SR/TB \\
 	    [a_{i}]; \\
 	    [screen0_{i}] \\
-	      select='{select}', \\
+	      trim=start={f/1000.0}:end={t/1000.0}, \\
 	      setpts=N/FRAME_RATE/TB \\
 	    [v_{i}]""")
                 if i < len(ss) - 1:
