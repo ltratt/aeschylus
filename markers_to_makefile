@@ -176,8 +176,8 @@ def main():
     else:
         start_time = times[2]
         audio_off = int(sys.argv[2]) / 1000.0
-        screen_off = (int(sys.argv[2]) + (times[2] - times[1])) / 1000.0
-        delay = times[2] - times[0]
+        screen_off = (times[2] - times[1]) / 1000.0
+        delay = 0
 
     if not os.path.exists("markers"):
         print("gte(t\\, 0)")
