@@ -11,7 +11,6 @@ AUDIO_DRIVER="sndio"
 AUDIO_FMT="s16"
 AUDIO_RATE="44100"
 # The desktop background will be set to this colour.
-#BACKGROUND_COLOUR="0x263127"
 BACKGROUND_COLOUR="0x595959"
 MINI_CAMERA_CROP="1400:1045:330:0"
 MINI_CAMERA_SCALE="570:-1"
@@ -21,17 +20,17 @@ MINI_CAMERA_SCALE="570:-1"
 # If your camera footage is behind the audio, this variable should be positive;
 # if the camera footage is ahead of the audio it should be negative. Time in
 # milliseconds. For autodetect, use the string "auto".
-CAMERA_LATENCY="50"
+CAMERA_LATENCY="225"
 CAMERA_DEVICE="/dev/video0"
 # If you're capturing the camera at a different framerate to X11, make sure the
 # two are integer multiples to avoid weird frame duplication in the final
 # video.
-CAMERA_FRAMERATE=30
+CAMERA_FRAMERATE=24
 # Where to place the camera overlay.
 CAMERA_OVERLAY="x=W-w+0:y=H-h+1"
 CAMERA_RESOLUTION="1920x1080"
 # If you don't have a greenscreen, set this to "null"
-CHROMAKEY="chromakey=286000:0.07:0.02,despill=type=green:mix=0.5:expand=0.3:brightness=0.8:green=-1:blue=0"
+CHROMAKEY="chromakey=286000:0.07:0.02,despill=type=green:mix=0.5:expand=0.3:brightness=1:green=-1:blue=0"
 # How often to generate a new GOP in seconds
 GOP=3
 XFCE_ORIGINAL_TERMINAL_FONT=`cat ~/.config/xfce4/terminal/terminalrc | grep "^FontName"`
@@ -40,7 +39,7 @@ X11_SCREEN0_DISPLAY=":0.0"
 # If you're capturing X11 at a different framerate to the camera, make sure the
 # two are integer multiples to avoid weird frame duplication in the final
 # video.
-X11_SCREEN0_FRAMERATE=15
+X11_SCREEN0_FRAMERATE=12
 # By default we capture the entire screen.
 X11_SCREEN0_RESOLUTION="1920x1080"
 
