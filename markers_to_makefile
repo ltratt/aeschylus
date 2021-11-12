@@ -233,7 +233,7 @@ camera0_test:
 	  -filter_complex " \\
 	    [0:a]asetpts=N/SR/TB,pan=mono|c0=c0+c1[a]; \\
 	    [0:v] \\
-	      fps=fps=${{FRAMERATE}}:start_time=0:round=down, \\
+	      fps=fps=${{FRAMERATE}}:start_time=0:round=near, \\
 	      crop=${{MINI_CAMERA_CROP}}, \\
 	      ${{CHROMAKEY}} \\
 	    [camera0]; \\
@@ -257,7 +257,7 @@ camera0_test:
 	      asplit={str(len(ss))} \\
 	    {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
 	    [0:v] \\
-	      fps=fps=${{FRAMERATE}}:start_time=0:round=down, \\
+	      fps=fps=${{FRAMERATE}}:start_time=0:round=near, \\
 	      split={str(len(ss))} \\
 	    {"".join([f"[camera0_{x}]" for x in range(len(ss))])}; \\""")
 
@@ -309,7 +309,7 @@ camera0_test:
 	    {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
 	    [1:v] \\
 	      setpts=PTS+{screen_off}/TB, \\
-	      fps=fps=${{FRAMERATE}}:start_time=0:round=down, \\
+	      fps=fps=${{FRAMERATE}}:start_time=0:round=near, \\
 	      split={str(len(ss))} \\
 	     {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
 
@@ -352,7 +352,7 @@ camera0_test:
 	      asplit={str(len(ss))} \\
 	    {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
 	    [0:v] \\
-	      fps=fps=${{FRAMERATE}}:start_time=0:round=down, \\
+	      fps=fps=${{FRAMERATE}}:start_time=0:round=near, \\
 	      split={str(len(ss))} \\
 	    {"".join([f"[v_{x}]" for x in range(len(ss))])}; \\""")
 
@@ -423,7 +423,7 @@ camera0_test:
 	      {"".join([f"[a_{x}]" for x in range(len(ss))])}; \\
 	    [1:v] \\
 	      setpts=PTS+{screen_off}/TB, \
-	      fps=fps=${{FRAMERATE}}:start_time=0:round=down, \\
+	      fps=fps=${{FRAMERATE}}:start_time=0:round=near, \\
 	      split={str(len(ss))} \\
 	      {"".join([f"[screen0_{x}]" for x in range(len(ss))])}; \\""")
 
