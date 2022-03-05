@@ -183,6 +183,8 @@ if [ -f ${edit_file} -a ! -f final.mp4 ]; then
     echo -n "Produce final.mp4 from final.nut? [Ny] "
     read produce_mp4
     if [ "X${produce_mp4}" = "XY" -o "X${produce_mp4}" = "Xy" ]; then
-        ffmpeg -i final.nut -c:v copy -c:a aac -b:a 320k -copyts final.mp4
+        echo -n "CRF? [0 = lossless; 16 = visually indistinguishable; 23+ horrible] "
+        read crf
+        ffmpeg -i final.nut -crf $crf -c:a aac -b:a 320k -copyts final.mp4
     fi
 fi
