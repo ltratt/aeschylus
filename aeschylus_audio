@@ -38,17 +38,11 @@ if [ ! -f raw.nut ]; then
       -map "0:a" -c:a flac -compression_level 0 -copyts -timestamp now raw.nut
     sleep 0.5
 
-    echo woo1
     restore_after_podcast
-    echo woo2
     trap - SIGEXIT SIGTERM
-    echo woo3
     cleanup
-    echo woo4
     recorded=1
 fi
-
-echo woo
 
 if [ ! -f pre_edit.flac ]; then
     cat << EOF > Makefile.header
