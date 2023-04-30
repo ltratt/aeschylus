@@ -1,0 +1,92 @@
+#! /usr/bin/env zsh
+
+set -e
+
+cleanup() {
+    restore_after_podcast
+}
+
+if [ $# -lt 1 ]; then
+    echo "Usage:\n  screencast <config> -test\n  screencast <config> <directory>"
+    exit 1
+fi
+
+. $1
+
+for cmd in ffmpeg ffmpeg-normalize ffplay python3 xbindkeys; do
+    which $cmd 2>&1 > /dev/null || ( echo "'$cmd' not installed" > /dev/stderr ; exit 1 )
+done
+
+mkdir -p $2
+cd $2
+
+recorded=0
+if [ ! -f raw.nut ]; then
+    setup_podcast
+    trap cleanup SIGEXIT SIGTERM
+
+    # We record the screen into one file and camera and audio into another.
+    echo "===> Recording. Press 'q' to stop recording and start post-processing."
+    sleep 0.5
+    ffmpeg \
+      -use_wallclock_as_timestamps 1 \
+      -f $AUDIO_DRIVER \
+      -use_wallclock_as_timestamps 1 \
+        -thread_queue_size 1024 \
+        -ar $AUDIO_RATE -sample_fmt ${AUDIO_FMT} \
+        -i $AUDIO_DEVICE \
+      -map "0:a" -c:a flac -compression_level 0 -copyts -timestamp now raw.nut
+    sleep 0.5
+
+    echo woo1
+    restore_after_podcast
+    echo woo2
+    trap - SIGEXIT SIGTERM
+    echo woo3
+    cleanup
+    echo woo4
+    recorded=1
+fi
+
+echo woo
+
+if [ ! -f pre_edit.flac ]; then
+    cat << EOF > Makefile.header
+AUDIO_FMT=${AUDIO_FMT}
+AUDIO_RATE=${AUDIO_RATE}
+EOF
+    markers_to_makefile audio
+    make -j `python3 -c "import os; print(int(os.cpu_count() * (3/4)))"`
+    echo "===> Pre_edit file: $2/pre_edit.flac"
+
+    echo -n "Run external editor? [N/y]: "
+    read run_audacity
+    if [ "X${run_audacity}" = "Xy" ]; then
+        echo "===> Edit and write to: $2/edit.flac so that final audio processing can occur"
+        exit 0
+    fi
+fi
+
+if [ -f edit.flac ]; then
+    edit_file="edit.flac"
+else
+    echo -n "Produce final edit from pre_edit.flac? [Y/n] "
+    read edit_from_preedit
+    if [ "X${edit_from_preedit}" = "Xn" ]; then
+        edit_file="edit.flac"
+    else
+        edit_file="pre_edit.flac"
+    fi
+fi
+
+if [ -f ${edit_file} -a ! -f final.flac ]; then
+    podcast_audio_process ${edit_file} final.flac
+    echo -n "Artist name for audio file? "
+    read artist
+    echo -n "Title for audio file? "
+    read title
+    metaflac --set-tag="ARTIST=${artist}" --set-tag "TITLE=${title}" final.flac
+    leaf=$(echo $title | tr "[:upper:]" "[:lower:]" | tr " " "_")
+    flac --decode --stdout final.flac | lame -b 96 --cbr --add-id3v2 --tt "$title" --ta "$artist" - $leaf.mp3
+    opusenc --bitrate 32 final.flac $leaf.opus
+fi

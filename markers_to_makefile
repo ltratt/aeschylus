@@ -3,16 +3,18 @@
 import os, subprocess, sys, time
 from decimal import Decimal
 
-INPUT_FILES = [("camera0.nut", "v:0"), ("camera0.nut", "a:0"), ("screen0.nut", "v:0")]
-AUDIO_FADE_TIME = 0.25 # In seconds
-AUDIO_FADE_PROPORTION = 0.3 # Between 0 and 1
+AUDIO_INPUT_FILE = "raw.nut"
+VIDEO_INPUT_FILES = [("camera0.nut", "v:0"), ("camera0.nut", "a:0"), ("screen0.nut", "v:0")]
+AUDIO_FADE_DOWN_TIME = 0.25 # In seconds
+AUDIO_FADE_UP_TIME = 0.6 # In seconds
+AUDIO_FADE_PROPORTION = 0.4 # Between 0 and 1
 MAKEFILE_CAMERA_CHUNKS = 1
 MAKEFILE_SCREEN_CHUNKS = 1
 
 def first_frame_times():
     i = 1
     times = []
-    for path, stream in INPUT_FILES:
+    for path, stream in VIDEO_INPUT_FILES:
         # Get the wall-clock time of the first frame
         c = subprocess.run([\
                 "ffprobe", \
@@ -114,7 +116,7 @@ def process_scenes(start_time, markers, seg_start, time_deleted, current_scene):
         else:
             print("Unknown tag '%s'" % tag)
             sys.exit(1)
-    if seg_start != None:
+    if seg_start != None and os.path.exists("camera0.nut"):
         c = subprocess.run([\
                 "ffprobe",
                 "-v", "error",
@@ -162,10 +164,63 @@ def scenes_with_delay(scenes, framerate, delay):
 def chunk(l, n):
     return (l[i:i + n] for i in range(0, len(l), n))
 
-def main():
-    if len(sys.argv) != 3:
-        sys.stderr.write("Usage: markers_to_makefile <framerate> <auto|camera_latency_in_ms>\n")
-        sys.exit(1)
+def audio():
+    c = subprocess.run([\
+            "ffprobe", \
+            "-i", AUDIO_INPUT_FILE, \
+            "-show_frames", \
+            "-print_format", "flat", \
+            "-read_intervals", "%+#2"], \
+        capture_output=True, stderr=None)
+    assert c.returncode == 0
+
+    ts = []
+    for l in c.stdout.decode().split("\n"):
+        if "pkt_pts_time=" in l:
+            ts.append(int(Decimal(l.split("=")[1].replace("\"", "")) * 1000))
+    assert(len(ts) == 2)
+    start_time = ts[0]
+    audio_off = ts[1] - ts[0]
+
+    if not os.path.exists("markers"):
+        print("gte(t\\, 0)")
+        sys.exit(0)
+
+    markers = []
+    with open("markers") as f:
+        for l in f:
+            l = l.strip()
+            if len(l) == 0:
+                continue
+            l = l.split(" ")
+            markers.append((int(float(l[0]) * 1000), l[1]))
+    markers.sort(key=lambda x: x[0])
+
+    remove_undos(markers)
+    volumes = []
+    for (x, _) in markers:
+        x = (x - start_time + audio_off) / 1000.0
+        volumes.append(f"volume='if(between(t\\,{x-AUDIO_FADE_DOWN_TIME}\\,{x}), 1 - {1-AUDIO_FADE_PROPORTION} * (t - {x-AUDIO_FADE_DOWN_TIME}) * {1 / AUDIO_FADE_DOWN_TIME}, 1)':eval=frame")
+        volumes.append(f"volume='if(between(t\\,{x}\\,{x+AUDIO_FADE_UP_TIME}), {AUDIO_FADE_PROPORTION} + {1-AUDIO_FADE_PROPORTION} * ((t-{x}) / {AUDIO_FADE_UP_TIME}), 1)':eval=frame")
+    volumes = ",\\\n	      ".join(volumes)
+
+    (seg_start, time_deleted, current_scene) = remove_first_rewinds(start_time, markers)
+    scenes = process_scenes(start_time, markers, seg_start, time_deleted, current_scene)
+    with open("Makefile", "w") as m:
+        m.write(open("Makefile.header", "r").read())
+        m.write("\npre_edit.flac: raw.nut\n")
+        print(start_time, markers)
+        audio_concat = "+".join([f"between(t\\,{f/1000.0}\\,{t/1000.0})" for (_, f, t) in scenes])
+        m.write(f"""\tffmpeg -i raw.nut \\
+          -filter_complex " \\
+	    [0:a] \\
+	      {volumes}, \\
+	      aselect={audio_concat},asetpts=PTS-STARTPTS \\
+            [a]" \\
+	  -map "[a]" \\
+	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 pre_edit.flac""")
+
+def video():
     times = first_frame_times()
     framerate = int(sys.argv[1])
     if sys.argv[2] == "auto":
@@ -206,6 +261,7 @@ def main():
 
         audio_concat = []
         for i, (_, f, t) in enumerate(scenes):
+            AUDIO_FADE_TIME = AUDIO_FADE_DOWN_TIME
             start = (t - f) / 1000 - AUDIO_FADE_TIME
             end = (t - f) / 1000
             beg = f"volume=enable='between(t, 0, {AUDIO_FADE_TIME})':volume='{AUDIO_FADE_PROPORTION} + {1-AUDIO_FADE_PROPORTION} * t * {1.0/AUDIO_FADE_PROPORTION}':eval=frame"
@@ -452,6 +508,16 @@ camera0_test:
                     m.write(" \\")
                 else:
                     m.write("\n\n")
+
+def main():
+    if len(sys.argv) < 2 and (sys.argv[1] == "audio" or len(sys.argv) == 3):
+        sys.stderr.write("Usage:\n  markers_to_makefile audio\n  markers_to_makefile <framerate> <auto|camera_latency_in_ms>\n")
+        sys.exit(1)
+
+    if len(sys.argv) == 2:
+        audio()
+    elif len(sys.argv) == 3:
+        video()
 
 if __name__ == "__main__":
     main()

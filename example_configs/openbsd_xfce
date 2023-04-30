@@ -3,13 +3,13 @@ APPS_MK_INVISIBLE="gkrellm xfce4-panel"
 # Processes which you wish to suspend with SIGSTOP during recording. They
 # will be resumed with SIGCONT when recording has finished.
 APPS_STOP="extsmaild chromium firefox gimp inkscape iridium thunderbird xfce4-panel xfce4-notifyd"
-AUDIO_DEVICE="snd/0"
+AUDIO_DEVICE="snd/default"
 AUDIO_DRIVER="sndio"
 # In order to prevent audio being continually converted between formats --
 # which can downgrade the quality -- the following two settings should match
 # whatever your audio interface is set to.
 AUDIO_FMT="s16"
-AUDIO_RATE="44100"
+AUDIO_RATE="48000"
 # The desktop background will be set to this colour.
 BACKGROUND_COLOUR="0x595959"
 MINI_CAMERA_CROP="1400:1045:330:0"
@@ -51,6 +51,10 @@ setup_screencast() {
     # Basic checks that we're a) going to record what we want b) not going to mess up our recording.
     if [ `sysctl -n kern.audio.record` -ne 1 ]; then
         echo "sysctl kern.audio.record is not set to 1!" 2>&1
+        exit 1
+    fi
+    if [ `sysctl -n kern.video.record` -ne 1 ]; then
+        echo "sysctl kern.video.record is not set to 1!" 2>&1
         exit 1
     fi
 
@@ -138,7 +142,7 @@ setup_screencast() {
 
 # This function can be called more than once, so it must be safe to "restart"
 # applications that are not actually stopped.
-restore_settings() {
+restore_after_screencast() {
     for d in `xrandr | grep " connected " | awk '{ print $1 }'`; do
         xrandr --output $d --auto
     done
@@ -185,4 +189,42 @@ kill_apps() {
 # Manually restart apps.
 unkill_apps() {
     redshift-gtk &
+}
+
+setup_podcast() {
+    # Basic checks that we're a) going to record what we want b) not going to mess up our recording.
+    if [ `sysctl -n kern.audio.record` -ne 1 ]; then
+        echo "sysctl kern.audio.record is not set to 1!" 2>&1
+        exit 1
+    fi
+
+    for n in `echo "$APPS_STOP"`; do
+        pkill -SIGSTOP "^$n$" || true
+    done
+
+    d=`mktemp -d`
+    firefox --profile $d --new-instance --browser &
+
+    markers_dir=`pwd`
+    d=`mktemp`
+    epochtime_loc=`which epochtime`
+    cat > $d << EOF
+# Up button on the MX ergo
+"$epochtime_loc $markers_dir/markers safepoint"
+  b:5
+
+# Down button on the MX ergo
+"$epochtime_loc $markers_dir/markers rewind"
+  b:4
+EOF
+
+    xbindkeys -f $d
+}
+
+restore_after_podcast() {
+    for n in `echo "$APPS_STOP"`; do
+        pkill -SIGCONT $n || true
+    done
+
+    pkill xbindkeys || true
 }

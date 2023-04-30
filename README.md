@@ -54,7 +54,7 @@ AUDIO_DRIVER="sndio"
 # which can downgrade the quality -- the following two settings should match
 # whatever your audio interface is set to.
 AUDIO_FMT="s16"
-AUDIO_RATE="44100"
+AUDIO_RATE="48000"
 MINI_CAMERA_CROP="700:490:350:160"
 MINI_CAMERA_SCALE="470:-1"
 CAMERA_DEVICE="/dev/video0"

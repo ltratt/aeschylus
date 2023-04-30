@@ -4,7 +4,7 @@ set -e
 
 cleanup() {
     unkill_apps
-    restore_settings
+    restore_after_screencast
 }
 
 if [ $# -lt 1 ]; then
@@ -83,7 +83,7 @@ if [ ! -f camera0.nut ]; then
       -map "2:v,1:a" -c:v libx264rgb -preset ultrafast -crf 0 -copyts -timestamp now screen0.nut
     sleep 0.5
 
-    restore_settings
+    restore_after_screencast
     trap - SIGEXIT SIGTERM
     cleanup
     recorded=1
