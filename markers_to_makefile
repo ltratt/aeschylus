@@ -197,12 +197,12 @@ def audio():
     markers.sort(key=lambda x: x[0])
 
     remove_undos(markers)
-    volumes = []
-    for (x, _) in markers:
-        x = (x - start_time + audio_off) / 1000.0
-        volumes.append(f"volume='if(between(t\\,{x-AUDIO_FADE_DOWN_TIME}\\,{x}), 1 - {1-AUDIO_FADE_PROPORTION} * (t - {x-AUDIO_FADE_DOWN_TIME}) * {1 / AUDIO_FADE_DOWN_TIME}, 1)':eval=frame")
-        volumes.append(f"volume='if(between(t\\,{x}\\,{x+AUDIO_FADE_UP_TIME}), {AUDIO_FADE_PROPORTION} + {1-AUDIO_FADE_PROPORTION} * ((t-{x}) / {AUDIO_FADE_UP_TIME}), 1)':eval=frame")
-    volumes = ",\\\n	      ".join(volumes)
+    # volumes = []
+    # for (x, _) in markers:
+    #     x = (x - start_time + audio_off) / 1000.0
+    #     volumes.append(f"volume='if(between(t\\,{x-AUDIO_FADE_DOWN_TIME}\\,{x}), 1 - {1-AUDIO_FADE_PROPORTION} * (t - {x-AUDIO_FADE_DOWN_TIME}) * {1 / AUDIO_FADE_DOWN_TIME}, 1)':eval=frame")
+    #     volumes.append(f"volume='if(between(t\\,{x}\\,{x+AUDIO_FADE_UP_TIME}), {AUDIO_FADE_PROPORTION} + {1-AUDIO_FADE_PROPORTION} * ((t-{x}) / {AUDIO_FADE_UP_TIME}), 1)':eval=frame")
+    # volumes = ",\\\n	      ".join(volumes)
 
     (seg_start, time_deleted, current_scene) = remove_first_rewinds(start_time, markers)
     scenes = process_scenes(start_time, markers, seg_start, time_deleted, current_scene)
@@ -214,7 +214,6 @@ def audio():
         m.write(f"""\tffmpeg -i raw.nut \\
           -filter_complex " \\
 	    [0:a] \\
-	      {volumes}, \\
 	      aselect={audio_concat},asetpts=PTS-STARTPTS \\
             [a]" \\
 	  -map "[a]" \\
