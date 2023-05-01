@@ -4,6 +4,8 @@ set -e
 
 AUDIO_FMT="s16"
 AUDIO_RATE="48000"
+# Period of time (in seconds) to fade in/out at the beginning/end of the file.
+FADE_IN_OUT=0.5
 # How quiet must a channel peak at be to be considered as not having a useful
 # signal?
 MUTE_THRESHOLD="-20"
@@ -84,6 +86,8 @@ echo "===> Apply noisegate and compressor to audio"
 noisegate_threshold=`python3 -c "print(${signal_level} - 20)"`
 compressor_lower_threshold=`python3 -c "print(${signal_level} - 9)"`
 compressor_upper_threshold=`python3 -c "print(${signal_level} + 3)"`
+length=`ffprobe -i $1 -show_entries format=duration -v quiet -of csv="p=0"`
+length_minus_fade=`python3 -c "print(${length} - ${FADE_IN_OUT})"`
 ffmpeg \
   -hide_banner \
   -i $1 \
@@ -95,7 +99,9 @@ ffmpeg \
     [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=1.5ms|c2=4ms| \
       c3=${compressor_upper_threshold}db|c4=6|c5=3db[a]; \
     [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=2ms|c2=12ms| \
-      c3=${compressor_lower_threshold}db|c4=2|c5=8db[a] \
+      c3=${compressor_lower_threshold}db|c4=2|c5=8db[a]; \
+    [a]afade=t=in:curve=qsin:st=0:d=${FADE_IN_OUT}[a]; \
+    [a]afade=t=out:curve=qsin:st=${length_minus_fade}:d=${FADE_IN_OUT}[a]
     " \
   -map "[a]" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
