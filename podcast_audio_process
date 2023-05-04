@@ -15,18 +15,8 @@ if [ $# -ne 2 ]; then
     exit 1
 fi
 
-for cmd in audacity ffmpeg ffmpeg-normalize python3 ; do
+for cmd in ffmpeg ffmpeg-normalize python3 ; do
     which $cmd 2> /dev/null > /dev/null || ( echo "'$cmd' not installed" > /dev/stderr ; exit 1 )
-done
-
-while [ true ]; do
-    echo -n "Average signal level ([dB (e.g. -18) | audacity]): "
-    read signal_level
-    if [ $signal_level = "audacity" ]; then
-        audacity $1 2> /dev/null > /dev/null || true
-    else
-        break
-    fi
 done
 
 td=`mktemp -d`
@@ -74,6 +64,18 @@ else
     exit 1
 fi
 
+echo "===> Pan and normalise"
+ffmpeg \
+  -hide_banner \
+  -i $1 \
+  -filter_complex " \
+    [0:a]${pan}" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/panned.flac
+ffmpeg-normalize ${td}/panned.flac -o ${td}/panned_normalised.flac -c:a flac  \
+  -t -25 ${dualmono} \
+  -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
+
 echo "===> Apply noisegate and compressor to audio"
 # Apply a noisegate and then a compressor to the mono audio. For guidance on
 # compression see e.g.:
@@ -83,17 +85,17 @@ echo "===> Apply noisegate and compressor to audio"
 #   https://www.youtube.com/embed/piXenxM355o?rel=0
 # I'm a little more conservative with my noisegate settings, since it's better
 # not to overdo it.
-noisegate_threshold=`python3 -c "print(${signal_level} - 22)"`
+signal_level=-18
+noisegate_threshold=-40
 compressor_lower_threshold=`python3 -c "print(${signal_level} - 9)"`
 compressor_upper_threshold=`python3 -c "print(${signal_level} + 3)"`
 length=`ffprobe -i $1 -show_entries format=duration -v quiet -of csv="p=0"`
 length_minus_fade=`python3 -c "print(${length} - ${FADE_IN_OUT})"`
 ffmpeg \
   -hide_banner \
-  -i $1 \
+  -i ${td}/panned_normalised.flac \
   -filter_complex " \
-    [0:a]${pan}[a]; \
-    [a]highpass=frequency=80[a]; \
+    [0:a]highpass=frequency=80[a]; \
     [a]agate=mode=downward:range=-10dB:threshold=${noisegate_threshold}dB: \
       ratio=2:attack=1.5:release=120:knee=7dB[a]; \
     [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=1.5ms|c2=4ms| \
@@ -101,16 +103,14 @@ ffmpeg \
     [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=2ms|c2=12ms| \
       c3=${compressor_lower_threshold}db|c4=2|c5=8db[a]; \
     [a]afade=t=in:curve=qsin:st=0:d=${FADE_IN_OUT}[a]; \
-    [a]afade=t=out:curve=qsin:st=${length_minus_fade}:d=${FADE_IN_OUT}[a]
-    " \
-  -map "[a]" \
+    [a]afade=t=out:curve=qsin:st=${length_minus_fade}:d=${FADE_IN_OUT}" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
-  ${td}/audio_gated_compressed.flac
+  ${td}/gated_compressed.flac
 
 echo "===> Normalise audio"
 # Normalise the audio and produce a final mkv file. Podcasts typically vary
 # between -16 and -20 LUFS.
-ffmpeg-normalize ${td}/audio_gated_compressed.flac -o $2 -c:a flac  \
+ffmpeg-normalize ${td}/gated_compressed.flac -o $2 -c:a flac  \
   -t -16 -lrt 10 -tp -1 ${dualmono} \
   -ar ${AUDIO_RATE} -e "-compression_level 12 -sample_fmt ${AUDIO_FMT}" -pr
 
