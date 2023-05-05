@@ -20,8 +20,9 @@ for cmd in ffmpeg ffmpeg-normalize python3 ; do
 done
 
 td=`mktemp -d`
+stage=1
 
-echo -n "===> Detect stereo/mono"
+echo -n "===> ${stage}: Detect stereo/mono"
 num_channels=`ffprobe -i $1 -show_entries stream=channels -select_streams a:0 -of compact=p=0:nk=1 -v 0`
 if [[ $num_channels == 1 ]]; then
     pan="anull"
@@ -64,7 +65,8 @@ else
     exit 1
 fi
 
-echo "===> Pan and pre-normalise"
+stage=$((stage+1))
+echo "===> ${stage}: Pan"
 # Pre-normalise the audio level so that our subsequent settings have (mostly)
 # predictable effects from one file to another.
 ffmpeg \
@@ -73,50 +75,104 @@ ffmpeg \
   -filter_complex " \
     [0:a]${pan}" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
-  ${td}/panned.flac
-ffmpeg-normalize ${td}/panned.flac -o ${td}/panned_normalised.flac -c:a flac  \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
+echo "===> ${stage}: High-pass"
+ffmpeg \
+  -hide_banner \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a "highpass=frequency=80" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
+echo "===> ${stage}: Normalise"
+ffmpeg-normalize ${td}/$((stage-1)).flac -o ${td}/${stage}.flac -c:a flac  \
   -t -25 ${dualmono} \
   -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
 
-echo "===> Apply noisegate and compressor"
-# Apply a noisegate and then a compressor to the mono audio. For guidance on
-# compression see e.g.:
-#   https://gist.github.com/scottburton11/3222152
-#   https://music.tutsplus.com/tutorials/a-master-guide-to-voice-compression-how-to--compress-voice-recordings--cms-25105
-# For the noisegate see e.g.:
-#   https://www.youtube.com/embed/piXenxM355o?rel=0
-# I'm a little more conservative with my noisegate settings, since it's better
-# not to overdo it.
-signal_level=-18
-noisegate_threshold=`python3 -c "print(${signal_level} - 22)"`
-compressor_lower_threshold=`python3 -c "print(${signal_level} - 9)"`
-compressor_mid_threshold=`python3 -c "print(${signal_level} + 3)"`
-compressor_upper_threshold=`python3 -c "print(${signal_level} + 9)"`
+stage=$((stage+1))
+echo "===> ${stage}: Limit"
+ffmpeg \
+  -hide_banner \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a \
+    "ladspa=file=${compressor_so}:p=${compressor_name}: \
+    c=c0=1|c1=1.5ms|c2=10ms|c3=-8db|c4=3|c5=1db" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
+echo "===> ${stage}: Normalise"
+ffmpeg-normalize ${td}/$((stage-1)).flac -o ${td}/${stage}.flac -c:a flac  \
+  -t -25 ${dualmono} \
+  -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
+
+stage=$((stage+1))
+echo "===> ${stage}: Compress"
+ffmpeg \
+  -hide_banner \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a \
+    "ladspa=file=${compressor_so}:p=${compressor_name}: \
+    c=c0=0|c1=1.5ms|c2=10ms|c3=-16db|c4=2|c5=3db" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
+echo "===> ${stage}: Normalise"
+ffmpeg-normalize ${td}/$((stage-1)).flac -o ${td}/${stage}.flac -c:a flac  \
+  -t -25 ${dualmono} \
+  -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
+
+stage=$((stage+1))
+echo "===> ${stage}: Compress"
+ffmpeg \
+  -hide_banner \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a \
+    "ladspa=file=${compressor_so}:p=${compressor_name}: \
+    c=c0=0|c1=1.5ms|c2=20ms|c3=-30db|c4=3|c5=7db" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
+echo "===> ${stage}: Fade in/out"
 length=`ffprobe -i $1 -show_entries format=duration -v quiet -of csv="p=0"`
 length_minus_fade=`python3 -c "print(${length} - ${FADE_IN_OUT})"`
 ffmpeg \
   -hide_banner \
-  -i ${td}/panned_normalised.flac \
-  -filter_complex " \
-    [0:a]highpass=frequency=80[a]; \
-    [a]agate=mode=downward:range=-10dB:threshold=${noisegate_threshold}dB: \
-      ratio=2:attack=1.5:release=120:knee=7dB[a]; \
-    [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=1.5ms|c2=10ms| \
-      c3=${compressor_upper_threshold}db|c4=10|c5=2db[a]; \
-    [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=1.5ms|c2=10ms| \
-      c3=${compressor_mid_threshold}db|c4=2|c5=3db[a]; \
-    [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=1.5ms|c2=30ms| \
-      c3=${compressor_lower_threshold}db|c4=3|c5=7db[a]; \
-    [a]afade=t=in:curve=qsin:st=0:d=${FADE_IN_OUT}[a]; \
-    [a]afade=t=out:curve=qsin:st=${length_minus_fade}:d=${FADE_IN_OUT}" \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a \
+    "afade=t=in:curve=qsin:st=0:d=${FADE_IN_OUT}, \
+    afade=t=out:curve=qsin:st=${length_minus_fade}:d=${FADE_IN_OUT}" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
-  ${td}/gated_compressed.flac
+  ${td}/${stage}.flac
 
-echo "===> Normalise audio"
+stage=$((stage+1))
+echo "===> ${stage}: Normalise"
+ffmpeg-normalize ${td}/$((stage-1)).flac -o ${td}/${stage}.flac -c:a flac  \
+  -t -25 ${dualmono} \
+  -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
+
+stage=$((stage+1))
+echo "===> ${stage}: Limit"
+ffmpeg \
+  -hide_banner \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a \
+    "ladspa=file=${compressor_so}:p=${compressor_name}: \
+    c=c0=1|c1=1.5ms|c2=10ms|c3=-13db|c4=3|c5=1db" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
+echo "===> ${stage}: Normalise"
 # Normalise the audio and produce a final mkv file. Podcasts typically vary
 # between -16 and -20 LUFS.
-ffmpeg-normalize ${td}/gated_compressed.flac -o $2 -c:a flac  \
-  -t -16 -lrt 10 -tp -1 ${dualmono} \
+ffmpeg-normalize ${td}/$((stage-1)).flac -o $2 -c:a flac  \
+  -t -16 -tp -1 ${dualmono} \
   -ar ${AUDIO_RATE} -e "-compression_level 12 -sample_fmt ${AUDIO_FMT}" -pr
 
 rm -rf ${td}
