@@ -64,7 +64,9 @@ else
     exit 1
 fi
 
-echo "===> Pan and normalise"
+echo "===> Pan and pre-normalise"
+# Pre-normalise the audio level so that our subsequent settings have (mostly)
+# predictable effects from one file to another.
 ffmpeg \
   -hide_banner \
   -i $1 \
@@ -76,7 +78,7 @@ ffmpeg-normalize ${td}/panned.flac -o ${td}/panned_normalised.flac -c:a flac  \
   -t -25 ${dualmono} \
   -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
 
-echo "===> Apply noisegate and compressor to audio"
+echo "===> Apply noisegate and compressor"
 # Apply a noisegate and then a compressor to the mono audio. For guidance on
 # compression see e.g.:
 #   https://gist.github.com/scottburton11/3222152
@@ -86,9 +88,10 @@ echo "===> Apply noisegate and compressor to audio"
 # I'm a little more conservative with my noisegate settings, since it's better
 # not to overdo it.
 signal_level=-18
-noisegate_threshold=-40
+noisegate_threshold=`python3 -c "print(${signal_level} - 22)"`
 compressor_lower_threshold=`python3 -c "print(${signal_level} - 9)"`
-compressor_upper_threshold=`python3 -c "print(${signal_level} + 3)"`
+compressor_mid_threshold=`python3 -c "print(${signal_level} + 3)"`
+compressor_upper_threshold=`python3 -c "print(${signal_level} + 9)"`
 length=`ffprobe -i $1 -show_entries format=duration -v quiet -of csv="p=0"`
 length_minus_fade=`python3 -c "print(${length} - ${FADE_IN_OUT})"`
 ffmpeg \
@@ -98,10 +101,12 @@ ffmpeg \
     [0:a]highpass=frequency=80[a]; \
     [a]agate=mode=downward:range=-10dB:threshold=${noisegate_threshold}dB: \
       ratio=2:attack=1.5:release=120:knee=7dB[a]; \
-    [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=1.5ms|c2=4ms| \
-      c3=${compressor_upper_threshold}db|c4=6|c5=3db[a]; \
-    [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=2ms|c2=12ms| \
-      c3=${compressor_lower_threshold}db|c4=2|c5=8db[a]; \
+    [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=1.5ms|c2=10ms| \
+      c3=${compressor_upper_threshold}db|c4=10|c5=2db[a]; \
+    [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=1.5ms|c2=10ms| \
+      c3=${compressor_mid_threshold}db|c4=2|c5=3db[a]; \
+    [a]ladspa=file=${compressor_so}:p=${compressor_name}:c=c0=0|c1=1.5ms|c2=30ms| \
+      c3=${compressor_lower_threshold}db|c4=3|c5=7db[a]; \
     [a]afade=t=in:curve=qsin:st=0:d=${FADE_IN_OUT}[a]; \
     [a]afade=t=out:curve=qsin:st=${length_minus_fade}:d=${FADE_IN_OUT}" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
