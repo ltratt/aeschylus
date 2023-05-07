@@ -5,9 +5,8 @@ from decimal import Decimal
 
 AUDIO_INPUT_FILE = "raw.nut"
 VIDEO_INPUT_FILES = [("camera0.nut", "v:0"), ("camera0.nut", "a:0"), ("screen0.nut", "v:0")]
-AUDIO_FADE_DOWN_TIME = 0.25 # In seconds
-AUDIO_FADE_UP_TIME = 0.6 # In seconds
-AUDIO_FADE_PROPORTION = 0.4 # Between 0 and 1
+AUDIO_FADE_DOWN_TIME = 0.15 # In seconds
+AUDIO_FADE_UP_TIME = 0.25 # In seconds
 MAKEFILE_CAMERA_CHUNKS = 1
 MAKEFILE_SCREEN_CHUNKS = 1
 
@@ -197,9 +196,32 @@ def audio():
     markers.sort(key=lambda x: x[0])
 
     remove_undos(markers)
-
     (seg_start, time_deleted, current_scene) = remove_first_rewinds(start_time, markers)
     scenes = process_scenes(start_time, markers, seg_start, time_deleted, current_scene)
+
+    selects = []
+    for (i, (_, f, t)) in enumerate(scenes):
+        assert(t - f > 1)
+        if i == 0: st_off = 0; end_off = AUDIO_FADE_DOWN_TIME
+        elif i == len(scenes) - 1: st_off = AUDIO_FADE_UP_TIME; end_off = 0
+        else: st_off = AUDIO_FADE_UP_TIME; end_off = AUDIO_FADE_DOWN_TIME
+        select = f"[0:a]aselect='between(t\\,{f/1000.0 + st_off}\\,{t/1000.0 - end_off})',asetpts=PTS-STARTPTS[a_{i}]"
+        selects.append(select)
+
+    concats = ["[a_0]"]
+    for i in range(1, len(scenes) - 1):
+        _, f, t = scenes[i - 1]
+        pre = f"[0:a]aselect='between(t\\,{t/1000.0 - AUDIO_FADE_DOWN_TIME}\\,{t/1000.0 + AUDIO_FADE_DOWN_TIME})',asetpts=PTS-STARTPTS,afade=t=out:curve=dese:d={AUDIO_FADE_DOWN_TIME}[pre_{i}]"
+        _, f, t = scenes[i]
+        post = f"[0:a]aselect='between(t\\,{f/1000.0 - AUDIO_FADE_UP_TIME}\\,{f/1000.0 + AUDIO_FADE_UP_TIME})',asetpts=PTS-STARTPTS,afade=t=in:curve=dese:d={AUDIO_FADE_DOWN_TIME}[post_{i}]"
+        merge = f"[pre_{i}][post_{i}]amerge[merge_{i}]"
+        selects.extend([pre, post, merge])
+        concats.extend([f"[merge_{i}]", f"[a_{i}]"])
+    concats.append(f"[a_{len(scenes) - 1}]")
+
+    selects = " ;\\\n            ".join(selects)
+    concats_joined = "".join(concats)
+    concats = f"{concats_joined}concat=n={len(concats)}:v=0:a=1"
     with open("Makefile", "w") as m:
         m.write(open("Makefile.header", "r").read())
         m.write("\npre_edit.flac: raw.nut\n")
@@ -207,10 +229,8 @@ def audio():
         audio_concat = "+".join([f"between(t\\,{f/1000.0}\\,{t/1000.0})" for (_, f, t) in scenes])
         m.write(f"""\tffmpeg -i raw.nut \\
           -filter_complex " \\
-	    [0:a] \\
-	      aselect={audio_concat},asetpts=PTS-STARTPTS \\
-            [a]" \\
-	  -map "[a]" \\
+            {selects}; \\
+            {concats} " \\
 	  -c:a flac -ar ${{AUDIO_RATE}} -sample_fmt ${{AUDIO_FMT}} -compression_level 1 pre_edit.flac""")
 
 def video():
