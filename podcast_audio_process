@@ -93,23 +93,6 @@ ffmpeg-normalize ${td}/$((stage-1)).flac -o ${td}/${stage}.flac -c:a flac  \
   -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
 
 stage=$((stage+1))
-echo "===> ${stage}: Limit"
-ffmpeg \
-  -hide_banner \
-  -i ${td}/$((stage-1)).flac \
-  -filter:a \
-    "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=1|c1=10ms|c2=10ms|c3=-8db|c4=3|c5=1db" \
-  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
-  ${td}/${stage}.flac
-
-stage=$((stage+1))
-echo "===> ${stage}: Normalise"
-ffmpeg-normalize ${td}/$((stage-1)).flac -o ${td}/${stage}.flac -c:a flac  \
-  -t -25 ${dualmono} \
-  -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
-
-stage=$((stage+1))
 echo "===> ${stage}: Compress"
 ffmpeg \
   -hide_banner \
