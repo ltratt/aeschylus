@@ -211,9 +211,9 @@ def audio():
     concats = ["[a_0]"]
     for i in range(1, len(scenes) - 1):
         _, f, t = scenes[i - 1]
-        pre = f"[0:a]aselect='between(t\\,{t/1000.0 - AUDIO_FADE_DOWN_TIME}\\,{t/1000.0 + AUDIO_FADE_DOWN_TIME})',asetpts=PTS-STARTPTS,afade=t=out:curve=dese:d={AUDIO_FADE_DOWN_TIME}[pre_{i}]"
+        pre = f"[0:a]aselect='between(t\\,{t/1000.0 - AUDIO_FADE_DOWN_TIME}\\,{t/1000.0 + AUDIO_FADE_DOWN_TIME})',asetpts=PTS-STARTPTS,afade=t=out:curve=ipar:d={AUDIO_FADE_DOWN_TIME}[pre_{i}]"
         _, f, t = scenes[i]
-        post = f"[0:a]aselect='between(t\\,{f/1000.0 - AUDIO_FADE_UP_TIME}\\,{f/1000.0 + AUDIO_FADE_UP_TIME})',asetpts=PTS-STARTPTS,afade=t=in:curve=dese:d={AUDIO_FADE_DOWN_TIME}[post_{i}]"
+        post = f"[0:a]aselect='between(t\\,{f/1000.0 - AUDIO_FADE_UP_TIME}\\,{f/1000.0 + AUDIO_FADE_UP_TIME})',asetpts=PTS-STARTPTS,afade=t=in:curve=ipar:d={AUDIO_FADE_DOWN_TIME}[post_{i}]"
         merge = f"[pre_{i}][post_{i}]amerge[merge_{i}]"
         selects.extend([pre, post, merge])
         concats.extend([f"[merge_{i}]", f"[a_{i}]"])
