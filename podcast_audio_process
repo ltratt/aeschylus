@@ -119,7 +119,7 @@ ffmpeg \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
     "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=0|c1=1.5ms|c2=10ms|c3=-16db|c4=2|c5=3db" \
+    c=c0=0|c1=20ms|c2=100ms|c3=-30db|c4=1.5|c5=7db" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
@@ -136,27 +136,14 @@ ffmpeg \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
     "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=0|c1=1.5ms|c2=20ms|c3=-30db|c4=3|c5=7db" \
-  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
-  ${td}/${stage}.flac
-
-stage=$((stage+1))
-echo "===> ${stage}: Fade in/out"
-length=`ffprobe -i $1 -show_entries format=duration -v quiet -of csv="p=0"`
-length_minus_fade=`python3 -c "print(${length} - ${FADE_IN_OUT})"`
-ffmpeg \
-  -hide_banner \
-  -i ${td}/$((stage-1)).flac \
-  -filter:a \
-    "afade=t=in:curve=qsin:st=0:d=${FADE_IN_OUT}, \
-    afade=t=out:curve=qsin:st=${length_minus_fade}:d=${FADE_IN_OUT}" \
+    c=c0=0|c1=1.5ms|c2=20ms|c3=-25db|c4=2.5|c5=7db" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
 stage=$((stage+1))
 echo "===> ${stage}: Normalise"
 ffmpeg-normalize ${td}/$((stage-1)).flac -o ${td}/${stage}.flac -c:a flac  \
-  -t -25 ${dualmono} \
+  -t -16 ${dualmono} \
   -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
 
 stage=$((stage+1))
@@ -165,10 +152,20 @@ ffmpeg \
   -hide_banner \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
-    "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=1|c1=1.5ms|c2=5ms|c3=-10db|c4=3|c5=1db, \
-    ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=1|c1=1.5ms|c2=10ms|c3=-13db|c4=2|c5=1db" \
+    "compand=attacks=0:points=-80/-80|-4.5/-4.5|0/-2" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
+echo "===> ${stage}: Fade beginning/end in/out"
+length=`ffprobe -i $1 -show_entries format=duration -v quiet -of csv="p=0"`
+length_minus_fade=`python3 -c "print(${length} - ${FADE_IN_OUT})"`
+ffmpeg \
+  -hide_banner \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a \
+    "afade=t=in:curve=qsin:st=0:d=${FADE_IN_OUT}, \
+    afade=t=out:curve=qsin:st=${length_minus_fade}:d=${FADE_IN_OUT}" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
