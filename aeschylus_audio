@@ -80,7 +80,7 @@ if [ -f ${edit_file} -a ! -f final.flac ]; then
     echo -n "Title for audio file? "
     read title
     metaflac --set-tag="ARTIST=${artist}" --set-tag "TITLE=${title}" final.flac
-    leaf=$(echo $title | tr -d "!'\"£$%^&*@()[]<>?#~_" | tr "[:upper:]" "[:lower:]" | tr " " "_")
+    leaf=$(echo $title | tr -d "!'\"£$%^&*@()[]<>?#~_," | tr "[:upper:]" "[:lower:]" | tr " " "_")
     flac --decode --stdout final.flac | lame -b 96 --cbr --add-id3v2 --tt "$title" --ta "$artist" - $leaf.mp3
     opusenc --bitrate 32 final.flac $leaf.opus
 fi
