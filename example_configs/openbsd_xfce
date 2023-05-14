@@ -2,7 +2,7 @@
 APPS_MK_INVISIBLE="gkrellm xfce4-panel"
 # Processes which you wish to suspend with SIGSTOP during recording. They
 # will be resumed with SIGCONT when recording has finished.
-APPS_STOP="extsmaild chromium firefox gimp inkscape iridium thunderbird xfce4-panel xfce4-notifyd"
+APPS_STOP="extsmaild chromium firefox gimp inkscape iridium nvim nvim-qt thunderbird xfce4-panel xfce4-notifyd"
 AUDIO_DEVICE="snd/default"
 AUDIO_DRIVER="sndio"
 # In order to prevent audio being continually converted between formats --
