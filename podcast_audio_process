@@ -119,15 +119,9 @@ ffmpeg \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
     "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=0|c1=20ms|c2=100ms|c3=-30db|c4=1.5|c5=7db" \
+    c=c0=0|c1=1.5s|c2=75ms|c3=-20db|c4=2|c5=3db" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
-
-stage=$((stage+1))
-echo "===> ${stage}: Normalise"
-ffmpeg-normalize ${td}/$((stage-1)).flac -o ${td}/${stage}.flac -c:a flac  \
-  -t -25 ${dualmono} \
-  -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
 
 stage=$((stage+1))
 echo "===> ${stage}: Compress"
@@ -136,7 +130,7 @@ ffmpeg \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
     "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=0|c1=1.5ms|c2=20ms|c3=-25db|c4=2.5|c5=7db" \
+    c=c0=0|c1=1.5ms|c2=25ms|c3=-30db|c4=4|c5=7db" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
@@ -152,7 +146,7 @@ ffmpeg \
   -hide_banner \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
-    "compand=attacks=0:points=-80/-80|-4.5/-4.5|0/-2" \
+    "compand=attacks=0:points=-80/-80|-5/-5|0/-5" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
@@ -174,7 +168,7 @@ echo "===> ${stage}: Normalise"
 # Normalise the audio and produce a final mkv file. Podcasts typically vary
 # between -16 and -20 LUFS.
 ffmpeg-normalize ${td}/$((stage-1)).flac -o $2 -c:a flac  \
-  -t -16 -tp -1 ${dualmono} \
+  -t -13 -tp -1 ${dualmono} \
   -ar ${AUDIO_RATE} -e "-compression_level 12 -sample_fmt ${AUDIO_FMT}" -pr
 
 rm -rf ${td}
