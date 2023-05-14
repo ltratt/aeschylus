@@ -102,7 +102,7 @@ echo "===> ${stage}: Noisegate"
 ffmpeg \
   -hide_banner \
   -i ${td}/$((stage-1)).flac \
-  -filter:a "agate=mode=downward:range=-18dB:threshold=-40dB:ratio=3:attack=1.5:release=120:knee=6dB" \
+  -filter:a "agate=mode=downward:range=-8dB:threshold=-42dB:ratio=3:attack=1.5:release=275:knee=5dB" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
