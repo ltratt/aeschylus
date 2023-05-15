@@ -174,10 +174,8 @@ ffmpeg \
 
 stage=$((stage+1))
 echo "===> ${stage}: Normalise"
-# Normalise the audio and produce a final mkv file. Podcasts typically vary
-# between -16 and -20 LUFS.
 ffmpeg-normalize ${td}/$((stage-1)).flac -o $2 -c:a flac  \
-  -t -13 -tp -1 ${dualmono} \
+  -t -13 -tp 0 ${dualmono} \
   -ar ${AUDIO_RATE} -e "-compression_level 12 -sample_fmt ${AUDIO_FMT}" -pr
 
 rm -rf ${td}
