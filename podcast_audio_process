@@ -92,6 +92,15 @@ ffmpeg \
   ${td}/${stage}.flac
 
 stage=$((stage+1))
+echo "===> ${stage}: EQ 250Hz"
+ffmpeg \
+  -hide_banner \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a "equalizer=f=250:width_type=q:width=1.0:gain=-3" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
 echo "===> ${stage}: Normalise"
 ffmpeg-normalize ${td}/$((stage-1)).flac -o ${td}/${stage}.flac -c:a flac  \
   -t -25 ${dualmono} \
