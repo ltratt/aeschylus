@@ -144,22 +144,6 @@ ffmpeg \
   ${td}/${stage}.flac
 
 stage=$((stage+1))
-echo "===> ${stage}: Normalise"
-ffmpeg-normalize ${td}/$((stage-1)).flac -o ${td}/${stage}.flac -c:a flac  \
-  -t -16 ${dualmono} \
-  -ar ${AUDIO_RATE} -e "-compression_level 1 -sample_fmt ${AUDIO_FMT}" -pr
-
-stage=$((stage+1))
-echo "===> ${stage}: Limit"
-ffmpeg \
-  -hide_banner \
-  -i ${td}/$((stage-1)).flac \
-  -filter:a \
-    "compand=attacks=0:points=-80/-80|-5/-5|0/-5" \
-  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
-  ${td}/${stage}.flac
-
-stage=$((stage+1))
 echo "===> ${stage}: Fade beginning/end in/out"
 length=`ffprobe -i $1 -show_entries format=duration -v quiet -of csv="p=0"`
 length_minus_fade=`python3 -c "print(${length} - ${FADE_IN_OUT})"`
@@ -175,7 +159,7 @@ ffmpeg \
 stage=$((stage+1))
 echo "===> ${stage}: Normalise"
 ffmpeg-normalize ${td}/$((stage-1)).flac -o $2 -c:a flac  \
-  -t -13 -tp 0 ${dualmono} \
+  -t -13 -tp -2 ${dualmono} \
   -ar ${AUDIO_RATE} -e "-compression_level 12 -sample_fmt ${AUDIO_FMT}" -pr
 
 rm -rf ${td}
