@@ -7,7 +7,7 @@ cleanup() {
 }
 
 if [ $# -lt 1 ]; then
-    echo "Usage:\n  screencast <config> -test\n  screencast <config> <directory>"
+    echo "Usage:\n  aeschylus_audio <directory> [<artist name>] [<title>]"
     exit 1
 fi
 
@@ -75,10 +75,17 @@ fi
 
 if [ -f ${edit_file} -a ! -f final.flac ]; then
     podcast_audio_process ${edit_file} final.flac
-    echo -n "Artist name for audio file? "
-    read artist
-    echo -n "Title for audio file? "
-    read title
+    if [ $# -gt 2 ]; then
+        artist=$3
+    else
+        echo -n "Artist name for audio file? "
+    fi
+    if [ $# -gt 3 ]; then
+        title=$4
+    else
+        echo -n "Title for audio file? "
+        read title
+    fi
     metaflac --set-tag="ARTIST=${artist}" --set-tag "TITLE=${title}" final.flac
     leaf=$(echo $title | tr -d "!'\"£$%^&*@()[]<>?#~_," | tr "[:upper:]" "[:lower:]" | tr " " "_")
     flac --decode --stdout final.flac | lame -b 96 --cbr --add-id3v2 --tt "$title" --ta "$artist" - $leaf.mp3
