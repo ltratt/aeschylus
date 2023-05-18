@@ -128,7 +128,7 @@ ffmpeg \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
     "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=0|c1=30ms|c2=75ms|c3=-20db|c4=2|c5=3db" \
+    c=c0=0|c1=20ms|c2=50ms|c3=-20db|c4=2|c5=3db" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
@@ -139,7 +139,7 @@ ffmpeg \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
     "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=0|c1=2.5ms|c2=25ms|c3=-30db|c4=2|c5=7db" \
+    c=c0=0|c1=2.5ms|c2=15ms|c3=-30db|c4=2.5|c5=5db" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
