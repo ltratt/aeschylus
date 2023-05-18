@@ -96,7 +96,7 @@ echo "===> ${stage}: EQ 250Hz"
 ffmpeg \
   -hide_banner \
   -i ${td}/$((stage-1)).flac \
-  -filter:a "equalizer=f=250:width_type=q:width=1.0:gain=-3" \
+  -filter:a "equalizer=f=250:width_type=q:width=0.8:gain=-4" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
