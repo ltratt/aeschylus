@@ -128,7 +128,7 @@ ffmpeg \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
     "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=0|c1=1.5s|c2=75ms|c3=-20db|c4=2|c5=3db" \
+    c=c0=0|c1=30ms|c2=75ms|c3=-20db|c4=2|c5=3db" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
@@ -139,7 +139,7 @@ ffmpeg \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
     "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=0|c1=1.5ms|c2=25ms|c3=-30db|c4=4|c5=7db" \
+    c=c0=0|c1=2.5ms|c2=25ms|c3=-30db|c4=2|c5=7db" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
@@ -159,7 +159,7 @@ ffmpeg \
 stage=$((stage+1))
 echo "===> ${stage}: Normalise"
 ffmpeg-normalize ${td}/$((stage-1)).flac -o $2 -c:a flac  \
-  -t -13 -tp -2 ${dualmono} \
+  -t -13 -tp -1 ${dualmono} \
   -ar ${AUDIO_RATE} -e "-compression_level 12 -sample_fmt ${AUDIO_FMT}" -pr
 
 rm -rf ${td}
