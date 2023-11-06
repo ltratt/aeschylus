@@ -72,8 +72,6 @@ fi
 
 stage=$((stage+1))
 echo "===> ${stage}: Pan"
-# Pre-normalise the audio level so that our subsequent settings have (mostly)
-# predictable effects from one file to another.
 ffmpeg \
   -hide_banner \
   -i $1 \
