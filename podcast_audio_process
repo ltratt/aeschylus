@@ -90,11 +90,38 @@ ffmpeg \
   ${td}/${stage}.flac
 
 stage=$((stage+1))
-echo "===> ${stage}: EQ 250Hz"
+echo "===> ${stage}: Low-pass"
 ffmpeg \
   -hide_banner \
   -i ${td}/$((stage-1)).flac \
-  -filter:a "equalizer=f=250:width_type=q:width=0.8:gain=-4" \
+  -filter:a "lowpass=frequency=18000" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
+echo "===> ${stage}: EQ 200Hz"
+ffmpeg \
+  -hide_banner \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a "equalizer=f=250:width_type=q:width=0.5:gain=2" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
+echo "===> ${stage}: EQ 500Hz"
+ffmpeg \
+  -hide_banner \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a "equalizer=f=500:width_type=q:width=1:gain=-2" \
+  -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
+  ${td}/${stage}.flac
+
+stage=$((stage+1))
+echo "===> ${stage}: EQ 11KHz"
+ffmpeg \
+  -hide_banner \
+  -i ${td}/$((stage-1)).flac \
+  -filter:a "equalizer=f=11000:width_type=q:width=2:gain=-4" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
@@ -126,7 +153,7 @@ ffmpeg \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
     "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=0|c1=20ms|c2=50ms|c3=-20db|c4=2|c5=3db" \
+    c=c0=0|c1=20ms|c2=50ms|c3=-20db|c4=3|c5=3db" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
@@ -137,7 +164,7 @@ ffmpeg \
   -i ${td}/$((stage-1)).flac \
   -filter:a \
     "ladspa=file=${compressor_so}:p=${compressor_name}: \
-    c=c0=0|c1=2.5ms|c2=15ms|c3=-30db|c4=2.5|c5=5db" \
+    c=c0=0|c1=2.5ms|c2=15ms|c3=-30db|c4=3|c5=5db" \
   -c:a flac -ar ${AUDIO_RATE} -sample_fmt ${AUDIO_FMT} -compression_level 1 \
   ${td}/${stage}.flac
 
